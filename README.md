@@ -7,9 +7,9 @@
 * Cpp11
 
 ## Use
-* Just copy Jsones.h and Jsone.cpp to your project.
+* Just copy Jsones.h and Jsones.cpp to your project.
 
-##Compile
+## Compile
 * Cmake can be used to generate project files
 
 
