@@ -1,7 +1,8 @@
 # JSONes
 
 * Just another small json library. it is just a parser and writer. No reflection or fancy specs.
-* It is tested with examples at json.org.
+* It is tested with examples at json.org
+* **This library does not validate json!**
 * *null* type is not supported
 * No dependency. Only standart library functions.
 * Cpp11
