@@ -61,6 +61,7 @@ namespace Jsones
         JNumber(std::string s);
         explicit JNumber(int s);
         explicit JNumber(float s);
+        explicit JNumber(double s);
         ~JNumber() override;
         bool IsInteger();
         int AsInt();
@@ -76,7 +77,7 @@ namespace Jsones
     };
     struct JArr;
 
-    /// @brief JObj is JsonObject. JObj contains map<string, JVal> objects and it's parent object. 
+    /// @brief JObj is JsonObject. JObj contains map<string, JVal> objects and it's parent object.
     struct JObj : public  JVal
     {
         std::map<std::string, JVal*> objects;
@@ -87,6 +88,12 @@ namespace Jsones
         JObj(JObj* parent = nullptr);
         ~JObj() override;
         
+        JObj(std::initializer_list <std::pair<std::string, JVal*>>);
+
+        void Add(std::pair<std::string, JVal*> add);
+        void Add(std::pair<std::string, JArr*> add);
+        void Add(std::pair<std::string, JObj*> add);
+
         void AddArr(std::string key, JArr* arr);
         void AddObj(std::string key, JObj* obj);
         void AddFloat(std::string key, float value);
@@ -94,12 +101,24 @@ namespace Jsones
         void AddString(std::string key, std::string value);
         void AddBool(std::string key, bool value);
         
-        void AddValue(std::string s, std::string k);
-        void AddValue(std::string s, JVal* val);
+        /// @brief Called from JParse.
+        /// @param key
+        /// @param val string will be detected and converted to JNumber, JBool, JString...
+        void AddValue(std::string key, std::string val);
+        void AddValue(std::string key, JVal* val);
+      
+        JVal* Get(const std::string& key);
+
         
-        JVal* operator[](std::string);
-        JVal* operator[](const char*);
     };
+    std::pair<std::string, JVal*> JValue(const std::string& str, const std::string& val);
+    std::pair<std::string, JVal*> JValue(const std::string& str, const char* val);
+    std::pair<std::string, JVal*> JValue(const std::string& str, double val);
+    std::pair<std::string, JVal*> JValue(const std::string& str, float val);
+    std::pair<std::string, JVal*> JValue(const std::string& str, bool val);
+    std::pair<std::string, JVal*> JValue(const std::string& str, int val);
+    std::pair<std::string, JVal*> JValue(const std::string& str, JObj* val);
+    std::pair<std::string, JVal*> JValue(const std::string& str, JArr* arr);
 
     struct JArr : public JObj
     {
@@ -110,17 +129,28 @@ namespace Jsones
         JArr(JObj* parent);
         ~JArr() override;
 
+        JArr(std::initializer_list<int>);
+        JArr(std::initializer_list<float>);
+        JArr(std::initializer_list<double>);
+        JArr(std::initializer_list<bool>);
+        JArr(std::initializer_list<std::string>);
+        JArr(std::initializer_list<JObj* >);
+        JArr(std::initializer_list<const char*> list);
+
         void AddObj(JObj* obj);
         void AddFloat(float value);
+        void AddDouble(float value);
         void AddInt(int value);
         void AddString(std::string value);
         void AddBool(bool value);
         
+
+
         void PushBack(JVal* val);
         void PushBack(std::string s);
     };
 
-    /// @brief cout's json structure and it's members types.
+    /// @brief cout json's structure and it's members types.
     /// @param root 
     /// @param tab 
     extern void PrintJson(JObj* root, int tab = 0);

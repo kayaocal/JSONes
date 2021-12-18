@@ -4,34 +4,24 @@
 void CreateJsonTest()
 {
     using namespace Jsones;
-    JObj* obj = new JObj(nullptr);
-    obj->AddBool("boolTest", false);
-    obj->AddInt("integerTest", 5);
-    obj->AddFloat("floatTest", 3.5f);
+    JObj* obj = new JObj{
+        JValue("integerTest", 9),
+        JValue("boolTest", false),
+        JValue("floatTest", 3.5f),
+        JValue("doubleTest", 3.5),
+        JValue("strTest", std::string("This is a test str")),
+        JValue("constCharTest", "This is a  const char* str"),
+        JValue("childObj", new JObj{
+                JValue("child", "childStr"),
+                JValue("childBool", false),
+                JValue("childInt", 339),
+                JValue("childArr", new JArr{3,6,9,12,15,18,21,24,27,30})
+            }),
+        JValue("intArr", new JArr{ 5,2,3,4,5 }),
+        JValue("boolArr", new JArr{true, false,true,false}),
+        JValue("strArr", new JArr{ "hello", "world", "initalizer", "list" })
+    };
 
-    JObj* childObj = new JObj(obj);
-    childObj->AddString("child", "childStr");
-    childObj->AddBool("childbool", false);
-    obj->AddObj("childObj", childObj);
-
-    JArr* intArr = new JArr(obj);
-    intArr->AddInt(5);
-    intArr->AddInt(2);
-    intArr->AddFloat(4.3f);
-    intArr->AddInt(44);
-    obj->AddArr("intArr", intArr);
-
-    JArr* boolArr = new JArr(obj);
-    boolArr->AddBool(false);
-    boolArr->AddBool(true);
-    boolArr->AddBool(false);
-    obj->AddArr("boolArr", boolArr);
-
-    JArr* strArr = new JArr(obj);
-    strArr->AddString("str1");
-    strArr->AddString("str2");
-    strArr->AddString("str3");
-    obj->AddArr("strArr", strArr);
     
     JArr* objArr = new JArr(obj);
     JObj* child1 = new JObj(objArr);
@@ -46,11 +36,16 @@ void CreateJsonTest()
     objArr->AddObj(child2);
     obj->AddArr("objArr", objArr);
 
-    std::cout<<std::endl << "JSON : " << JWrite(obj, 0, true).rdbuf();
-    std::string s = JWrite(obj, 0, true).str();
+    JVal* val = obj->Get("objArr");
+    std::cout << "val type : " << (int)val->type;
+    std::string s("integerTest");
+    std::cout << "val type : "  ;
+    
+    //std::cout<<std::endl << "JSON : " << JWrite(obj, 0, true).rdbuf();
+    std::string str = JWrite(obj, 0, true).str();
 
      std::cout<<std::endl<<"----------------"<<std::endl;
-    JObj* parsedObj = JParse(s.c_str());
+    JObj* parsedObj = JParse(str.c_str());
     PrintJson(parsedObj);
     delete obj;
 
