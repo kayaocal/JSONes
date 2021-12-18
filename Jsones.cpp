@@ -710,7 +710,7 @@ namespace Jsones
         return obj;
     }
 
-    std::string beautifiedTab ("\t");
+    std::string beautifiedTab ("    ");
     std::string beautifiedNewLine ("\n");
     std::string beautifiedSpace (" ");
     std::string emptyString ("");
@@ -756,7 +756,7 @@ namespace Jsones
         return emptyString;
     }
 
-    std::stringstream JWrite(JObj* root, float tab, bool beautify)
+    std::stringstream JWrite(JObj* root, bool beautify, float tab)
     {
         std::stringstream ss;
 

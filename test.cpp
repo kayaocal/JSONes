@@ -23,7 +23,7 @@ void CreateJsonTest()
     };
 
     
-    JArr* objArr = new JArr(obj);
+   /* JArr* objArr = new JArr(obj);
     JObj* child1 = new JObj(objArr);
     child1->AddInt("child1/int", 3);
     child1->AddFloat("child1/float", 3.2f);
@@ -39,10 +39,10 @@ void CreateJsonTest()
     JVal* val = obj->Get("objArr");
     std::cout << "val type : " << (int)val->type;
     std::string s("integerTest");
-    std::cout << "val type : "  ;
+    std::cout << "val type : "  ;*/
     
-    //std::cout<<std::endl << "JSON : " << JWrite(obj, 0, true).rdbuf();
-    std::string str = JWrite(obj, 0, true).str();
+    std::cout<<std::endl << "JSON : " << JWrite(obj, true).rdbuf();
+    std::string str = JWrite(obj).str();
 
      std::cout<<std::endl<<"----------------"<<std::endl;
     JObj* parsedObj = JParse(str.c_str());

@@ -164,7 +164,7 @@ namespace Jsones
     /// @param tab just give 0
     /// @param beautify if true
     /// @return 
-    extern std::stringstream JWrite(JObj* root, float tab = 0, bool beautify = false);
+    extern std::stringstream JWrite(JObj* root, bool beautify = false, float tab = 0);
 }
 
 
