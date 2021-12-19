@@ -5,7 +5,7 @@
 //                                | | (___ | |  | |  \| | ___  ___ 
 //                            _   | |\___ \| |  | | . ` |/ _ \/ __|
 //                           | |__| |____) | |__| | |\  |  __/\__ \
-//                            \____/|_____/ \____/|_| \_|\___||___/ by Enes Kaya ÖCAL
+//                            \____/|_____/ \____/|_| \_|\___||___/ by Enes Kaya ï¿½CAL
 //                                                                                                       
 //***************************************************************************************************************
 //###############################################################################################################
@@ -87,30 +87,24 @@ namespace Jsones
         /// @param parent just keep it null. parentObj is only needed while parsing.
         JObj(JObj* parent = nullptr);
         ~JObj() override;
+
         
         JObj(std::initializer_list <std::pair<std::string, JVal*>>);
 
         void Add(std::pair<std::string, JVal*> add);
         void Add(std::pair<std::string, JArr*> add);
         void Add(std::pair<std::string, JObj*> add);
-
-        void AddArr(std::string key, JArr* arr);
-        void AddObj(std::string key, JObj* obj);
-        void AddFloat(std::string key, float value);
-        void AddInt(std::string key, int value);
-        void AddString(std::string key, std::string value);
-        void AddBool(std::string key, bool value);
-        
+       
         /// @brief Called from JParse.
         /// @param key
         /// @param val string will be detected and converted to JNumber, JBool, JString...
-        void AddValue(std::string key, std::string val);
-        void AddValue(std::string key, JVal* val);
+        void AddToObjFromParsedString(std::string key, std::string val);
       
         JVal* Get(const std::string& key);
 
         
     };
+    
     std::pair<std::string, JVal*> JValue(const std::string& str, const std::string& val);
     std::pair<std::string, JVal*> JValue(const std::string& str, const char* val);
     std::pair<std::string, JVal*> JValue(const std::string& str, double val);
@@ -120,6 +114,7 @@ namespace Jsones
     std::pair<std::string, JVal*> JValue(const std::string& str, JObj* val);
     std::pair<std::string, JVal*> JValue(const std::string& str, JArr* arr);
 
+    
     struct JArr : public JObj
     {
         std::vector<JVal*> arr;
@@ -128,23 +123,26 @@ namespace Jsones
         /// @param parent just keep it null. parentObj is only needed while parsing.
         JArr(JObj* parent);
         ~JArr() override;
-
-        JArr(std::initializer_list<int>);
-        JArr(std::initializer_list<float>);
-        JArr(std::initializer_list<double>);
-        JArr(std::initializer_list<bool>);
-        JArr(std::initializer_list<std::string>);
-        JArr(std::initializer_list<JObj* >);
-        JArr(std::initializer_list<const char*> list);
-
-        void AddObj(JObj* obj);
-        void AddFloat(float value);
-        void AddDouble(float value);
-        void AddInt(int value);
-        void AddString(std::string value);
-        void AddBool(bool value);
         
-
+        template<typename T>
+        JArr(std::initializer_list<T>list)
+        {
+            type = JType::ARR;
+            auto it = list.begin();
+            while (it != list.end())
+            {
+                Add(*it);
+                it++;
+            }
+        }
+        
+        void Add(JObj* obj);
+        void Add(double value);
+        void Add(int value);
+        void Add(float value);
+        void Add(std::string& value);
+        void Add(const char* str);
+        void Add(bool value);
 
         void PushBack(JVal* val);
         void PushBack(std::string s);

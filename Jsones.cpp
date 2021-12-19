@@ -253,7 +253,7 @@ namespace Jsones
             if(tokens[i]->type == TokenType::CURLY_BRACKET_OPEN)
             {
                JObj* obj = new JObj(cursor);
-               cursor->AddValue(lastKey, obj);
+               cursor->Add(JValue(lastKey, obj));
                cursor = obj;
                beforeColon = true;
                 lastKey = "";
@@ -268,7 +268,7 @@ namespace Jsones
                 }
                 else if(value != "")
                 {
-                   cursor->AddValue(lastKey, value);   
+                   cursor->AddToObjFromParsedString(lastKey, value);   
                    value = "";
                 }
                 lastKey = "";
@@ -281,7 +281,7 @@ namespace Jsones
             else if(tokens[i]->type == TokenType::ANGLE_BRACKET_OPEN)
             {
                JArr* arr = new JArr(cursor);
-               cursor->AddValue(lastKey, arr);
+               cursor->Add(JValue(lastKey, arr));
                cursor = arr;
                beforeColon = true;
                lastKey = "";
@@ -340,7 +340,7 @@ namespace Jsones
                 }
                 else if(lastKey!="")
                 {
-                    cursor->AddValue(lastKey, value);
+                    cursor->AddToObjFromParsedString(lastKey, value);
                     lastKey = "";
                     value = "";
                 }
@@ -483,38 +483,7 @@ namespace Jsones
         add.second->parentObj = this;
     }
 
-    void JObj::AddArr(std::string key, JArr* arr)
-    {
-        Add(std::pair<std::string, JArr*>(key, arr));
-    }
-
-    void JObj::AddObj(std::string key, JObj* obj)
-    {
-        objects.insert(std::pair<std::string, JVal*>(key, obj));
-    }
-
-    void JObj::AddFloat(std::string key, float value)
-    {
-        objects.insert(std::pair<std::string, JVal*>(key, new JNumber(value)));
-    }
-
-    void JObj::AddInt(std::string key, int value)
-    {
-        objects.insert(std::pair<std::string, JVal*>(key, new JNumber(value)));
-    }
-
-    void JObj::AddString(std::string key, std::string value)
-    {
-        objects.insert(std::pair<std::string, JVal*>(key, new JStr(value)));
-    }
-
-
-    void JObj::AddBool(std::string key, bool value)
-    {
-        objects.insert(std::pair<std::string, JVal*>(key, new JBool(value)));
-    }
-
-    void JObj::AddValue(std::string key, std::string val)
+    void JObj::AddToObjFromParsedString(std::string key, std::string val)
     {
         bool isNumber = true;
         if(val.length() == 0 )
@@ -531,25 +500,20 @@ namespace Jsones
     
         if(isNumber)
         {
-            objects.insert(std::pair<std::string, JVal*>(key, new JNumber(val)));
+            Add(JValue(key, val));
         }
         else if(val == "false")
         {
-            AddBool(key, false);
+           Add(JValue(key, false));
         }
         else if(val=="true")
         {
-            AddBool(key, true);
+            Add(JValue(key, true));
         }
         else
         {
-            AddString(key, val);
+            Add(JValue(key, val));
         }
-    }
-
-    void JObj::AddValue(std::string s, JVal* val)
-    {
-        objects.insert(std::pair<std::string, JVal*>(s, val));
     }
 
     JVal* JObj::Get(const std::string& key)
@@ -590,92 +554,34 @@ namespace Jsones
         }
     }
 
-    JArr::JArr(std::initializer_list<int> list)
-        :JObj(nullptr)
-    {
-        type = JType::ARR;
-        auto it = list.begin();
-        while (it != list.end())
-        {
-            AddInt(*it);
-            it++;
-        }
-    }
-
-    JArr::JArr(std::initializer_list<bool> list)
-        :JObj(nullptr)
-    {
-        type = JType::ARR;
-        auto it = list.begin();
-        while (it != list.end())
-        {
-            AddBool(*it);
-            it++;
-        }
-    }
-
-    JArr::JArr(std::initializer_list<float> list)
-        :JObj(nullptr)
-    {
-        type = JType::ARR;
-        auto it = list.begin();
-        while (it != list.end())
-        {
-            AddFloat(*it);
-            it++;
-        }
-    }
-
-    JArr::JArr(std::initializer_list<std::string> list)
-        :JObj(nullptr)
-    {
-        type = JType::ARR;
-        auto it = list.begin();
-        while (it != list.end())
-        {
-            AddString(*it);
-            it++;
-        }
-    }
-
-    JArr::JArr(std::initializer_list<const char*> list)
-        :JObj(nullptr)
-    {
-        type = JType::ARR;
-        auto it = list.begin();
-        while (it != list.end())
-        {
-            AddString(*it);
-            it++;
-        }
-    }
-
-    void JArr::AddObj(JObj* obj)
+    void JArr::Add(JObj* obj)
     {
         arr.push_back(obj);
     }
-
-    void JArr::AddFloat(float value)
+    
+    void JArr::Add(double value)
     {
         arr.push_back(new JNumber(value));
     }
-
-    void JArr::AddDouble(float value)
+    void JArr::Add(int value)
     {
         arr.push_back(new JNumber(value));
     }
-
-    void JArr::AddInt(int value)
+    void JArr::Add(float value)
     {
         arr.push_back(new JNumber(value));
     }
-
-    void JArr::AddString(std::string value)
+    void JArr::Add(std::string& value)
     {
         arr.push_back(new JStr(value));
     }
 
-    void JArr::AddBool(bool value)
+    void JArr::Add(const char* str)
+    {
+        arr.push_back(new JStr(str));
+    }
+
+    void JArr::Add(bool value)
     {
         arr.push_back(new JBool(value));
     }
