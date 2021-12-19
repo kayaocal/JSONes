@@ -26,21 +26,22 @@ JObj* parsedObj = JParse(s.c_str());
 ```c++
 using namespace Jsones;
  JObj* obj = new JObj{
-        JValue("integerTest", 9),
-        JValue("boolTest", false),
-        JValue("floatTest", 3.5f),
-        JValue("doubleTest", 3.5),
-        JValue("strTest", std::string("This is a test str")),
-        JValue("constCharTest", "This is a  const char* str"),
-        JValue("childObj", new JObj{
-                JValue("child", "childStr"),
-                JValue("childBool", false),
-                JValue("childInt", 339),
-                JValue("childArr", new JArr{3,6,9,12,15,18,21,24,27,30})
+        JObj* obj = new JObj{
+        JPair("integerTest", 9),
+        JPair("boolTest", false),
+        JPair("floatTest", 3.5f),
+        JPair("doubleTest", 3.5),
+        JPair("strTest", std::string("This is a test str")),
+        JPair("constCharTest", "This is a  const char* str"),
+        JPair("childObj", new JObj{
+                JPair("child", "childStr"),
+                JPair("childBool", false),
+                JPair("childInt", 339),
+                JPair("childArr", new JArr{3,6,9,12,15,18,21,24,27,30})
             }),
-        JValue("intArr", new JArr{ 5,2,3,4,5 }),
-        JValue("boolArr", new JArr{true, false,true,false}),
-        JValue("strArr", new JArr{ "hello", "world", "initalizer", "list" })
+        JPair("intArr", new JArr{ 5,2,3,4,5 }),
+        JPair("boolArr", new JArr{true, false,true,false}),
+        JPair("strArr", new JArr{ "hello", "world", "initalizer", "list" })
     };
 std::string jsonOutput = JWrite(obj); //0 as tab(spacing) level and true for beautfy
 ```

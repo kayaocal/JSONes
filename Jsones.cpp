@@ -132,44 +132,49 @@ namespace Jsones
         }
     }
 
-    std::pair<std::string, JVal*> JValue(const std::string& str, const char* val)
+    std::pair<std::string, JVal*> JPair(const std::string& key, const char* val)
     {
-        return std::pair<std::string, JVal*>(str, new JStr(val));
+        return std::pair<std::string, JVal*>(key, new JStr(val));
     }
 
-    std::pair<std::string, JVal*> JValue(const std::string& str, const std::string& val)
+    std::pair<std::string, JVal*> JPair(const std::string& key, const std::string& val)
     {
-        return std::pair<std::string, JVal*>(str, new JStr(val));
+        return std::pair<std::string, JVal*>(key, new JStr(val));
     }
 
-    std::pair<std::string, JVal*> JValue(const std::string& str, double val)
+    std::pair<std::string, JVal*> JPair(const std::string& key, double val)
     {
-        return std::pair<std::string, JVal*>(str, new JNumber(val));
+        return std::pair<std::string, JVal*>(key, new JNumber(val));
     }
 
-    std::pair<std::string, JVal*> JValue(const std::string& str, float val)
+    std::pair<std::string, JVal*> JPair(const std::string& key, float val)
     {
-        return std::pair<std::string, JVal*>(str, new JNumber(val));
+        return std::pair<std::string, JVal*>(key, new JNumber(val));
     }
  
-    std::pair<std::string, JVal*> JValue(const std::string& str, bool val)
+    std::pair<std::string, JVal*> JPair(const std::string& key, bool val)
     {
-        return std::pair<std::string, JVal*>(str, new JBool(val));
+        return std::pair<std::string, JVal*>(key, new JBool(val));
     }
 
-    std::pair<std::string, JVal*> JValue(const std::string&str, int val)
+    std::pair<std::string, JVal*> JPair(const std::string& key, int val)
     {
-        return std::pair<std::string, JVal*>(str, new JNumber(val));
+        return std::pair<std::string, JVal*>(key, new JNumber(val));
     }
 
-    std::pair<std::string, JVal*> JValue(const std::string& str, JObj* val)
+    std::pair<std::string, JVal*> JPair(const std::string& key, JObj* val)
     {
-        return std::pair<std::string, JVal*>(str, val);
+        return std::pair<std::string, JVal*>(key, val);
     }
 
-    std::pair<std::string, JVal*> JValue(const std::string& str, JArr* arr)
+    std::pair<std::string, JVal*> JPair(const std::string& key, JArr* arr)
     {
-        return std::pair<std::string, JVal*>(str, arr);
+        return std::pair<std::string, JVal*>(key, arr);
+    }
+
+    JSONES_API std::pair<std::string, JVal*> JPair(const std::string& key, JVal* jVal)
+    {
+        return JSONES_API std::pair<std::string, JVal*>(key, jVal);
     }
 
     void PrintJson(JObj* root, int tab)
@@ -253,7 +258,7 @@ namespace Jsones
             if(tokens[i]->type == TokenType::CURLY_BRACKET_OPEN)
             {
                JObj* obj = new JObj(cursor);
-               cursor->Add(JValue(lastKey, obj));
+               cursor->Add(JPair(lastKey, obj));
                cursor = obj;
                beforeColon = true;
                 lastKey = "";
@@ -281,7 +286,7 @@ namespace Jsones
             else if(tokens[i]->type == TokenType::ANGLE_BRACKET_OPEN)
             {
                JArr* arr = new JArr(cursor);
-               cursor->Add(JValue(lastKey, arr));
+               cursor->Add(JPair(lastKey, arr));
                cursor = arr;
                beforeColon = true;
                lastKey = "";
@@ -500,19 +505,19 @@ namespace Jsones
     
         if(isNumber)
         {
-            Add(JValue(key, val));
+            Add(JPair(key, val));
         }
         else if(val == "false")
         {
-           Add(JValue(key, false));
+           Add(JPair(key, false));
         }
         else if(val=="true")
         {
-            Add(JValue(key, true));
+            Add(JPair(key, true));
         }
         else
         {
-            Add(JValue(key, val));
+            Add(JPair(key, val));
         }
     }
 

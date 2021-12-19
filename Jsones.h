@@ -5,7 +5,7 @@
 //                                | | (___ | |  | |  \| | ___  ___ 
 //                            _   | |\___ \| |  | | . ` |/ _ \/ __|
 //                           | |__| |____) | |__| | |\  |  __/\__ \
-//                            \____/|_____/ \____/|_| \_|\___||___/ by Enes Kaya �CAL
+//                            \____/|_____/ \____/|_| \_|\___||___/ by Enes Kaya OCAL
 //                                                                                                       
 //***************************************************************************************************************
 //###############################################################################################################
@@ -13,7 +13,12 @@
 //  JSONes - just another small json library. it is just a parser and writer. No reflection or fancy specs.
 //  JSONes's name is coming from merge of json and enes words.
 //  
-  
+
+// You may need JSONES_API for importing or exporting in your library
+#ifndef JSONES_API
+    #define JSONES_API
+#endif
+
 
 
 #ifndef JSONES_H__
@@ -26,7 +31,7 @@
 
 namespace Jsones
 {
-    enum class JType
+    enum class JSONES_API JType
     {
         OBJ = 1,
         NUM = 2,
@@ -35,8 +40,7 @@ namespace Jsones
         ARR = 5
     };
 
-
-    struct JVal
+    struct JSONES_API JVal
     {
         JType type;
 
@@ -45,7 +49,7 @@ namespace Jsones
         virtual ~JVal();
     };
 
-    struct JStr : public JVal
+    struct JSONES_API JStr : public JVal
     {
       std::string str;
 
@@ -54,7 +58,7 @@ namespace Jsones
       ~JStr() override;
     };
 
-    struct JNumber : public JVal
+    struct JSONES_API JNumber : public JVal
     {
         std::string str;
 
@@ -69,7 +73,7 @@ namespace Jsones
         double AsDouble();
     };
 
-    struct JBool : public JVal
+    struct JSONES_API JBool : public JVal
     {
         bool val;
         JBool(bool b);
@@ -78,7 +82,7 @@ namespace Jsones
     struct JArr;
 
     /// @brief JObj is JsonObject. JObj contains map<string, JVal> objects and it's parent object.
-    struct JObj : public  JVal
+    struct JSONES_API JObj : public  JVal
     {
         std::map<std::string, JVal*> objects;
         JObj* parentObj;
@@ -105,17 +109,7 @@ namespace Jsones
         
     };
     
-    std::pair<std::string, JVal*> JValue(const std::string& str, const std::string& val);
-    std::pair<std::string, JVal*> JValue(const std::string& str, const char* val);
-    std::pair<std::string, JVal*> JValue(const std::string& str, double val);
-    std::pair<std::string, JVal*> JValue(const std::string& str, float val);
-    std::pair<std::string, JVal*> JValue(const std::string& str, bool val);
-    std::pair<std::string, JVal*> JValue(const std::string& str, int val);
-    std::pair<std::string, JVal*> JValue(const std::string& str, JObj* val);
-    std::pair<std::string, JVal*> JValue(const std::string& str, JArr* arr);
-
-    
-    struct JArr : public JObj
+    struct JSONES_API JArr : public JObj
     {
         std::vector<JVal*> arr;
 
@@ -148,21 +142,48 @@ namespace Jsones
         void PushBack(std::string s);
     };
 
+    /// @brief Quick way to create json object pair.
+    JSONES_API std::pair<std::string, JVal*> JPair(const std::string& key, const std::string& val);
+    
+    /// @brief Quick way to create json object pair.
+    JSONES_API std::pair<std::string, JVal*> JPair(const std::string& key, const char* val);
+    
+    /// @brief Quick way to create json object pair.
+    JSONES_API std::pair<std::string, JVal*> JPair(const std::string& key, double val);
+    
+    /// @brief Quick way to create json object pair.
+    JSONES_API std::pair<std::string, JVal*> JPair(const std::string& key, float val);
+    
+    /// @brief Quick way to create json object pair.
+    JSONES_API std::pair<std::string, JVal*> JPair(const std::string& key, bool val);
+    
+    /// @brief Quick way to create json object pair.
+    JSONES_API std::pair<std::string, JVal*> JPair(const std::string& key, int val);
+    
+    /// @brief Quick way to create json object pair.
+    JSONES_API std::pair<std::string, JVal*> JPair(const std::string& key, JObj* val);
+    
+    /// @brief Quick way to create json object pair.
+    JSONES_API std::pair<std::string, JVal*> JPair(const std::string& key, JArr* arr);
+
+    /// @brief Quick way to create json object pair.
+    JSONES_API std::pair<std::string, JVal*> JPair(const std::string& key, JVal* jVal);
+    
     /// @brief cout json's structure and it's members types.
     /// @param root 
     /// @param tab 
-    extern void PrintJson(JObj* root, int tab = 0);
+    JSONES_API void PrintJson(JObj* root, int tab = 0);
     
     /// @brief Parses json
     /// @return JObj
-    extern JObj* JParse(const char*);
+    JSONES_API JObj* JParse(const char*);
 
     /// @brief Converts JObj to json string
     /// @param root 
     /// @param tab just give 0
     /// @param beautify if true
     /// @return 
-    extern std::stringstream JWrite(JObj* root, bool beautify = false, int tab = 0);
+    JSONES_API std::stringstream JWrite(JObj* root, bool beautify = false, int tab = 0);
 }
 
 
