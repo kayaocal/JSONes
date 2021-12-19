@@ -4,50 +4,45 @@
 void CreateJsonTest()
 {
     using namespace Jsones;
-    JObj* obj = new JObj{
+
+    JObj h = {JPair("tst", "tst")};
+    
+    
+    JObj obj = {
         JPair("integerTest", 9),
         JPair("boolTest", false),
         JPair("floatTest", 3.5f),
         JPair("doubleTest", 3.5),
         JPair("strTest", std::string("This is a test str")),
         JPair("constCharTest", "This is a  const char* str"),
-        JPair("childObj", new JObj{
+        JPair("hObj", std::move(h)),
+        JPair("childObj", JObj{
                 JPair("child", "childStr"),
                 JPair("childBool", false),
                 JPair("childInt", 339),
-                JPair("childArr", new JArr{3,6,9,12,15,18,21,24,27,30})
+                JPair("childArr", JArray({3,6,9,12,15,18,21,24,27,30}))
             }),
+        
         JPair("intArr", new JArr{ 5,2,3,4,5 }),
         JPair("boolArr", new JArr{true, false,true,false}),
-        JPair("strArr", new JArr{ "hello", "world", "initalizer", "list" })
-    };
-
+        JPair("strArr", JArray({ "hello", "world", "initalizer", "list" }))
+        };
     
-   /* JArr* objArr = new JArr(obj);
-    JObj* child1 = new JObj(objArr);
-    child1->AddInt("child1/int", 3);
-    child1->AddFloat("child1/float", 3.2f);
-    child1->AddBool("child1/bool", false);
-    JObj* child2 = new JObj(objArr);
-    child2->AddInt("child2/int", 3);
-    child2->AddFloat("child2/float", 3.2f);
-    child2->AddBool("child2/bool", false);
-    objArr->AddObj(child1);
-    objArr->AddObj(child2);
-    obj->AddArr("objArr", objArr);
 
-    JVal* val = obj->Get("objArr");
-    std::cout << "val type : " << (int)val->type;
-    std::string s("integerTest");
-    std::cout << "val type : "  ;*/
-    
-    std::cout<<std::endl << "JSON : " << JWrite(obj, true).rdbuf();
-    std::string str = JWrite(obj).str();
+
+    JArr arrRef={3,5,8,12,5};
+    arrRef[2] = 1222;
+    std::cout<<"htest  : " << JWrite(&h).rdbuf();
+    std::cout<<"RefTest : " << JWrite(&arrRef).rdbuf();
+    //((obj->GetObj("childObj")->GetArr("childArr"))[0]) = 888;
+        obj["integerTest"] = 5155;
+
+    std::cout<<std::endl << "JSON : " << JWrite(&obj, true).rdbuf();
+    std::string str = JWrite(&obj).str();
 
      std::cout<<std::endl<<"----------------"<<std::endl;
     JObj* parsedObj = JParse(str.c_str());
     PrintJson(parsedObj);
-    delete obj;
 
 }
 

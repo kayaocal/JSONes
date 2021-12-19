@@ -166,16 +166,29 @@ namespace Jsones
     {
         return std::pair<std::string, JVal*>(key, val);
     }
+    
+
+    std::pair<std::string, JVal*> JPair(const std::string& key, JObj&& val)
+    {
+         JObj* obj = new JObj(std::move(val));
+        return std::pair<std::string, JVal*>(key, obj);
+    }
 
     std::pair<std::string, JVal*> JPair(const std::string& key, JArr* arr)
     {
         return std::pair<std::string, JVal*>(key, arr);
     }
 
+    std::pair<std::string, JVal*> JPair(const std::string& key, JArr& arr)
+    {
+        return std::pair<std::string, JVal*>(key, &arr);
+    }
+
     JSONES_API std::pair<std::string, JVal*> JPair(const std::string& key, JVal* jVal)
     {
         return JSONES_API std::pair<std::string, JVal*>(key, jVal);
     }
+
 
     void PrintJson(JObj* root, int tab)
     {
@@ -209,7 +222,7 @@ namespace Jsones
             }
             else if(m.second->type == JType::ARR)
             {
-               std::cout<<"[" << m.first << "] : " << "ARR : ";
+               std::cout<<"[ARR][" << m.first << "] : ";
             
                 for(auto it : dynamic_cast<JArr*>(m.second)->arr)
                 {
@@ -235,7 +248,7 @@ namespace Jsones
             }
             else
             {
-                std::cout<<"[" << m.first << "] : " << "OBJ" ;
+                std::cout<<"[OBJ][" << m.first << "] : " ;
                 PrintJson(dynamic_cast<JObj*>(m.second), tab+1);
             }
         }
@@ -373,6 +386,66 @@ namespace Jsones
     {
     }
 
+    void JVal::operator=(const int& v)
+    {
+        jassert(type == JType::NUM, "integer type can only be assigned to JNum types");
+        JNumber* num = dynamic_cast<JNumber*>(this);
+        if(num != nullptr)
+        {
+            num->str = std::to_string(v);
+        }
+    }
+
+    void JVal::operator=(const float& v)
+    {
+        jassert(type == JType::NUM, "float type can only be assigned to JNum types");
+        JNumber* num = dynamic_cast<JNumber*>(this);
+        if(num != nullptr)
+        {
+            num->str = std::to_string(v);
+        }
+    }
+
+    void JVal::operator=(const double& v)
+    {
+        jassert(type == JType::NUM, "double type can only be assigned to JNum types");
+        JNumber* num = dynamic_cast<JNumber*>(this);
+        if(num != nullptr)
+        {
+            num->str = std::to_string(v);
+        }
+    }
+
+    void JVal::operator=(const bool v)
+    {
+        jassert(type == JType::BOOL, "bool type can only be assigned to JBool types");
+        JBool* num = dynamic_cast<JBool*>(this);
+        if(num != nullptr)
+        {
+            num->val = v;
+        }
+    }
+
+    void JVal::operator=(const std::string& str)
+    {
+        jassert(type == JType::STR, "std::string type can only be assigned to JStr types");
+        JStr* num = dynamic_cast<JStr*>(this);
+        if(num != nullptr)
+        {
+            num->str = str;
+        }
+    }
+
+    void JVal::operator=(const char* str)
+    {
+        jassert(type == JType::STR, "const char* type can only be assigned to JStr types");
+        JStr* num = dynamic_cast<JStr*>(this);
+        if(num != nullptr)
+        {
+            num->str = str;
+        }
+    }
+
     JStr::JStr(std::string s)
         : JVal(JType::STR), str(s)
     {
@@ -456,8 +529,18 @@ namespace Jsones
     {
         for(auto m : objects)
         {
+            std::cout<<"[DELETE] : " << m.first<<std::endl;
             delete m.second;
         }
+    }
+
+    JObj::JObj(JObj&& objR) noexcept
+        :JVal(JType::OBJ), parentObj((objR.parentObj))
+    {
+        objR.parentObj = nullptr;
+        objects.insert(std::make_move_iterator(begin(objR.objects)),
+            std::make_move_iterator(end(objR.objects)));
+        objR.objects.clear();
     }
 
     JObj::JObj(std::initializer_list<std::pair<std::string, JVal*>>list)
@@ -529,10 +612,36 @@ namespace Jsones
             std::cout << "Succesfully Found!"<<std::endl;
             return found->second;
         }
+        
+
         return nullptr;
     }
 
-    
+    JObj* JObj::GetObj(const std::string& key)
+    {
+        JVal* val = Get(key);
+        assert(val != nullptr, "Given key is exist");
+        assert(val->type == JType::OBJ, "Given key is not an JObj*");
+
+        return dynamic_cast<JObj*>(val);
+    }
+
+    JArr* JObj::GetArr(const std::string& key)
+    {
+        JVal* val = Get(key);
+        assert(val != nullptr, "Given key is exist");
+        assert(val->type == JType::ARR, "Given key is not an JArr*");
+
+        return dynamic_cast<JArr*>(val);
+    }
+
+    JVal& JObj::operator[](const std::string&str)
+    {
+        JVal* val = Get(str);
+        jassert(val!=nullptr , "given key is not exist");
+        return *val;
+    }
+
 
     void JArr::PushBack(JVal* val)
     {
@@ -589,6 +698,12 @@ namespace Jsones
     void JArr::Add(bool value)
     {
         arr.push_back(new JBool(value));
+    }
+
+    JVal& JArr::operator[](int index)
+    {
+        jassert(index < arr.size(), "JArr index exceeds vector size!");
+        return *arr[index];
     }
 
     std::string Token::ToString() const
@@ -667,6 +782,43 @@ namespace Jsones
         return emptyString;
     }
 
+    std::stringstream JWrite(JArr* arr, bool beautify, int tab)
+    {
+        std::stringstream ss;
+        ss << NewLine(beautify) << Tab(beautify, tab);
+        ss << "[" << NewLine(beautify);
+
+        bool subFirst = true;
+        for (auto it : arr->arr)
+        {
+            if (!subFirst)
+            {
+                ss << "," << NewLine(beautify);
+            }
+            ss << Tab(beautify, tab + 1);
+
+            subFirst = false;
+            if (it->type == JType::STR)
+            {
+                ss << Space(beautify) << "\"" << dynamic_cast<JStr*>(it)->str << "\"";
+            }
+            else if (it->type == JType::NUM)
+            {
+                ss << Space(beautify) << dynamic_cast<JNumber*>(it)->str;
+            }
+            else if (it->type == JType::BOOL)
+            {
+                ss << Space(beautify) << (dynamic_cast<JBool*>(it)->val ? "true" : "false");
+            }
+            else if (it->type == JType::OBJ)
+            {
+                ss << JWrite(dynamic_cast<JObj*>(it), tab + 1, beautify).rdbuf();
+            }
+        }
+        ss << NewLine(beautify) << Tab(beautify, tab) << "]";
+        return ss;
+    }
+
     std::stringstream JWrite(JObj* root, bool beautify, int tab)
     {
         std::stringstream ss;
@@ -707,37 +859,8 @@ namespace Jsones
                 {
                     ss<<"\""<<m.first<<"\""<<Space(beautify)<<":";
                 }
-                ss<<NewLine(beautify)<<Tab(beautify, tab);
-                ss<<"["<<NewLine(beautify); 
-            
-                bool subFirst = true;
-                for(auto it : dynamic_cast<JArr*>(m.second)->arr)
-                {
-                    if(!subFirst)
-                    {
-                        ss<<","<<NewLine(beautify);
-                    }
-                    ss<<Tab(beautify, tab+1);
-              
-                    subFirst = false;
-                    if(it->type == JType::STR)
-                    {
-                        ss<<Space(beautify)<<"\""<<dynamic_cast<JStr*>(it)->str<<"\"";
-                    }
-                    else if(it->type == JType::NUM)
-                    {
-                        ss<<Space(beautify)<<dynamic_cast<JNumber*>(it)->str;
-                    }
-                    else if(it->type == JType::BOOL)
-                    {
-                        ss<<Space(beautify)<<(dynamic_cast<JBool*>(it)->val ? "true" : "false");
-                    }
-                    else if(it->type == JType::OBJ)
-                    {
-                        ss<<JWrite(dynamic_cast<JObj*>(it), tab+1, beautify).rdbuf();
-                    }
-                }
-                ss<<NewLine(beautify)<<Tab(beautify, tab)<<"]";
+                ss<<JWrite(dynamic_cast<JArr*>(m.second), beautify, tab).rdbuf();
+                
             }
             else if(root->type == JType::OBJ)
             {

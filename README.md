@@ -1,11 +1,11 @@
 # JSONes
 
-* Just another small json library. it is just a parser and writer. No reflection or fancy specs.
+* Just another small json parser and writer. It has no reflection or fancy specs.
 * It is tested with examples at json.org
-* **This library does not validate json!**
-* *null* type is not supported
-* No dependency. Only standart library functions.
-* Cpp11
+* **This library does not validate json yet!**
+* **null** type is not supported
+* Only standart library. No any other 3rd party library required.
+* Written in cpp 11.
 
 ## Use
 * Just copy Jsones.h and Jsones.cpp to your project.
@@ -13,6 +13,37 @@
 ## Compile
 * Cmake can be used to generate project files
 
+## Structure
+```c++
+enum class JSONES_API JType{ OBJ = 1, NUM = 2, STR = 3, BOOL = 4, ARR = 5 };
+//base struct.
+struct JSONES_API JVal{
+    JType type;
+    ...
+};
+
+//struct for string value. Also type is JType::STR
+struct JSONES_API JStr : public JVal{...};
+
+//struct for number value as integer, float double. Also type is JType::NUM
+struct JSONES_API JNumber : public JVal{...}
+
+//struct for boolean value. Also type is JType::BOOL
+struct JSONES_API JBool : public JVal{...}
+
+//struct for json objects. Also type is JType::OBJ
+struct JSONES_API JObj : public  JVal
+{
+    std::map<std::string, JVal*> objects;
+    ...
+}
+
+//struct for json arrays. Also type is JType::ARR
+struct JSONES_API JArr : public JObj{
+    std::vector<JVal*> arr;
+    ...
+}
+```
 
 ## How to parse Json
 
@@ -20,13 +51,56 @@
 using namespace Jsones;
 JObj* parsedObj = JParse(s.c_str());
 ```
+## Delete Json
+```c++
+using namespace Jsones;
+
+JObj* parsedObj = JParse(s.c_str());
+//It deletes all child values, objects and arrays.
+delete parsedObj;
+
+//or
+JObj obj = JObject({JPair("integerTest", 9)}
+//It deletes all child values, objects and arrays.
+delete &obj;
+```
+
+## How to change an object key's value
+```c++
+using namespace Jsones;
+JObj* parsedObj = JParse(s.c_str());
+
+//assertion if key is not exist or given value is not match with JVal type. 
+//E.g: if value is bool, you can only set it to JBool or if value is integer, 
+//then it can only be set to JNumber
+parsedObj->Set("key", value);
+
+//or...
+//JObject returns JObj Refrence, You should delete JObj to prevent memory leak.
+JObj& obj = JObject({JPair("integerTest", 9)}
+obj["integerTest"] = 5155;
+```
+
+## How to change an array's nth element's value
+```c++
+using namespace Jsones;
+//Create array
+JArr arrRef = {3,5,8,12,5};
+//Change it's element
+arrRef[2] = 1222;
+
+//or...
+
+JArr* arr = new JArr{3, 4, 5, 6, 7, 8, 9};
+(*arr)[3] = 444;
+
+```
 
 ## How to write Json
 
 ```c++
 using namespace Jsones;
  JObj* obj = new JObj{
-        JObj* obj = new JObj{
         JPair("integerTest", 9),
         JPair("boolTest", false),
         JPair("floatTest", 3.5f),
