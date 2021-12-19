@@ -66,7 +66,7 @@ namespace Jsones
         bool IsInteger();
         int AsInt();
         float AsFloat();
-        float AsDouble();
+        double AsDouble();
     };
 
     struct JBool : public JVal
@@ -162,7 +162,7 @@ namespace Jsones
     /// @param tab just give 0
     /// @param beautify if true
     /// @return 
-    extern std::stringstream JWrite(JObj* root, bool beautify = false, float tab = 0);
+    extern std::stringstream JWrite(JObj* root, bool beautify = false, int tab = 0);
 }
 
 

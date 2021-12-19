@@ -35,7 +35,7 @@ namespace Jsones
     {
         bool keyStarted = false;
         std::string key;
-        int len = strlen(js);
+        size_t len = strlen(js);
         std::string ts = "";
         bool dittoMarked = false;
         for(int i = 0; i < len; i++)
@@ -427,7 +427,7 @@ namespace Jsones
         return std::stof(str);
     }
 
-    float JNumber::AsDouble()
+    double JNumber::AsDouble()
     {
         return std::stod(str);
     }
@@ -662,7 +662,7 @@ namespace Jsones
         return emptyString;
     }
 
-    std::stringstream JWrite(JObj* root, bool beautify, float tab)
+    std::stringstream JWrite(JObj* root, bool beautify, int tab)
     {
         std::stringstream ss;
 
@@ -730,7 +730,6 @@ namespace Jsones
                     else if(it->type == JType::OBJ)
                     {
                         ss<<JWrite(dynamic_cast<JObj*>(it), tab+1, beautify).rdbuf();
-                        //PrintJson(dynamic_cast<JObj*>(it), tab+1);
                     }
                 }
                 ss<<NewLine(beautify)<<Tab(beautify, tab)<<"]";
@@ -741,7 +740,6 @@ namespace Jsones
                 ss<<JWrite(dynamic_cast<JObj*>(m.second), tab+1, beautify).rdbuf();
             }
         }
-
     
         ss<<NewLine(beautify) << Tab(beautify, tab-1)<<"}";
         return ss;
