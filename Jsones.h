@@ -67,16 +67,26 @@ namespace Jsones
         void operator = (const bool v);
         void operator = (const std::string& str);
         void operator = (const char* str);
+
+        virtual std::string ToString()
+        {
+            return "VAL";
+        }
         
     };
 
     struct JSONES_API JStr : public JVal
     {
-      std::string str;
+        std::string str;
 
-      JStr(std::string s);
+        JStr(std::string s);
 
-      ~JStr() override;
+        ~JStr() override;
+
+        virtual std::string ToString() override
+        {
+            return str;
+        }
         
      
     };
@@ -95,6 +105,12 @@ namespace Jsones
         float AsFloat() const;
         double AsDouble() const;
 
+        virtual std::string ToString() override
+        {
+            return str;
+        }
+        
+
     };
 
     struct JSONES_API JBool : public JVal
@@ -102,6 +118,12 @@ namespace Jsones
         bool val;
         JBool(bool b);
         ~JBool() override;
+
+        virtual std::string ToString() override
+        {
+            return (val ? "true": "false");
+        }
+        
 
     };
     struct JArr;
@@ -164,19 +186,21 @@ namespace Jsones
      }
 
     /// @brief It's derrived from JObj because it's the easiest way to parse json. You may see it on JParse function.
-    struct JSONES_API JArr : public JObj
+    struct JSONES_API JArr : public JVal
     {
         std::vector<JVal*> arr;
-
+        JObj* parentObj;
         /// @brief Constructor
         /// @param parent just keep it null. parentObj is only needed while parsing.
         JArr(JObj* parent);
         ~JArr() override;
+        JArr(JArr&& ar);
         
         template<typename T>
         JArr(std::initializer_list<T>list)
+            :JVal(JType::ARR)
         {
-            type = JType::ARR;
+           
             auto it = list.begin();
             while (it != list.end())
             {
@@ -229,6 +253,9 @@ namespace Jsones
     /// @brief Quick way to create json object pair.
     JSONES_API std::pair<std::string, JVal*> JPair(const std::string& key, JArr* arr);
 
+    JSONES_API std::pair<std::string, JVal*> JPair(const std::string& key, JArr&& arr);
+
+    
     /// @brief Quick way to create json object pair.
     JSONES_API std::pair<std::string, JVal*> JPair(const std::string& key, JArr& arr);
 

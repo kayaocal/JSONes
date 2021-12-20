@@ -179,6 +179,13 @@ namespace Jsones
         return std::pair<std::string, JVal*>(key, arr);
     }
 
+    std::pair<std::string, JVal*> JPair(const std::string& key, JArr&& arr)
+    {
+        JArr* marr = new JArr(std::move(arr));
+        return std::pair<std::string, JVal*>(key, marr);
+        
+    }
+    
     std::pair<std::string, JVal*> JPair(const std::string& key, JArr& arr)
     {
         return std::pair<std::string, JVal*>(key, &arr);
@@ -266,6 +273,7 @@ namespace Jsones
         std::string lastKey = "";
         std::string value = "";
         JObj* valueAsObj = nullptr;
+        JArr* cursorArray = nullptr;
         for(int i = 0; i < tokens.size(); i++)
         {
             if(tokens[i]->type == TokenType::CURLY_BRACKET_OPEN)
@@ -279,9 +287,9 @@ namespace Jsones
             }
             else if(tokens[i]->type == TokenType::CURLY_BRACKET_CLOSE)
             {
-                if(cursor->type == JType::ARR)
+                if(cursorArray != nullptr)
                 {
-                    dynamic_cast<JArr*>(cursor)->PushBack(value);   
+                    cursorArray->PushBack(value);   
                    value = "";
                 }
                 else if(value != "")
@@ -290,7 +298,7 @@ namespace Jsones
                    value = "";
                 }
                 lastKey = "";
-                if(cursor->parentObj != nullptr && cursor->parentObj->type == JType::ARR)
+                if(cursor->parentObj != nullptr && cursorArray != nullptr)
                 {
                     valueAsObj = cursor;
                 }
@@ -300,7 +308,7 @@ namespace Jsones
             {
                JArr* arr = new JArr(cursor);
                cursor->Add(JPair(lastKey, arr));
-               cursor = arr;
+               cursorArray = arr;
                beforeColon = true;
                lastKey = "";
                value = "";
@@ -309,16 +317,16 @@ namespace Jsones
             {
                 if(valueAsObj!=nullptr)
                 {
-                    dynamic_cast<JArr*>(cursor)->PushBack(valueAsObj);   
+                    cursorArray->PushBack(valueAsObj);   
                     valueAsObj = nullptr;
                 }
                 else if(value != "")
                 {
-                    dynamic_cast<JArr*>(cursor)->PushBack(value);   
+                    cursorArray->PushBack(value);   
                    value = "";
                 }
                 lastKey = "";
-                cursor = cursor->parentObj;
+                cursorArray = nullptr;
             }
             else if(tokens[i]->type == TokenType::KEY)
             {
@@ -326,7 +334,7 @@ namespace Jsones
                 {
                     std::cout<<"";
                 }
-                if(beforeColon && cursor->type!=JType::ARR)
+                if(beforeColon && cursorArray == nullptr)
                 {
                     lastKey.append(tokens[i]->str);
                     value = "";
@@ -343,16 +351,16 @@ namespace Jsones
             }
             else if(tokens[i]->type == TokenType::COMMA)
             {
-                if(cursor->type == JType::ARR)
+                if(cursorArray != nullptr)
                 {
                     if(valueAsObj!=nullptr)
                     {
-                        dynamic_cast<JArr*>(cursor)->PushBack(valueAsObj);   
+                        cursorArray->PushBack(valueAsObj);   
                         valueAsObj = nullptr;
                     }
                     else
                     {
-                         dynamic_cast<JArr*>(cursor)->PushBack(value);
+                         cursorArray->PushBack(value);
                         value = "";
                     }
                 }
@@ -384,6 +392,7 @@ namespace Jsones
 
     JVal::~JVal()
     {
+        //std::cout<<"DELETED : " << ToString(); 
     }
 
     void JVal::operator=(const int& v)
@@ -454,7 +463,6 @@ namespace Jsones
 
     JStr::~JStr()
     {
-    
     }
 
     JNumber::JNumber(std::string s)
@@ -480,6 +488,7 @@ namespace Jsones
 
     JNumber::~JNumber()
     {
+        
     }
 
     bool JNumber::IsInteger()
@@ -529,7 +538,7 @@ namespace Jsones
     {
         for(auto m : objects)
         {
-            std::cout<<"[DELETE] : " << m.first<<std::endl;
+            //std::cout<<"[DELETE] : " << m.first<<std::endl;
             delete m.second;
         }
     }
@@ -588,7 +597,7 @@ namespace Jsones
     
         if(isNumber)
         {
-            Add(JPair(key, val));
+            Add(std::pair<std::string, JVal*>(key, new JNumber(val)));
         }
         else if(val == "false")
         {
@@ -655,18 +664,29 @@ namespace Jsones
 
 
     JArr::JArr(JObj* parent)
-        : JObj(parent)
+        :JVal(JType::ARR), parentObj(nullptr)
     {
-        type = JType::ARR;
+        
     }
 
     JArr::~JArr()
     {
+        //std::cout<<"Delete Array";
         for(auto m : arr)
         {
+            //std::cout<<"[DELETE ARR ELEMENT] : " << m->ToString()<<std::endl;
             delete m;
         }
     }
+
+    JArr::JArr(JArr&& ar)
+        :JVal(JType::ARR), parentObj(nullptr)
+    {
+        // ar.parentObj = nullptr;
+        // objects.insert(std::make_move_iterator(begin(objR.objects)),
+        //     std::make_move_iterator(end(objR.objects)));
+        // objR.objects.clear();
+    } 
 
     void JArr::Add(JObj* obj)
     {

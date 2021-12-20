@@ -12,7 +12,7 @@ void CreateJsonTest()
         JPair("integerTest", 9),
         JPair("boolTest", false),
         JPair("floatTest", 3.5f),
-        JPair("doubleTest", 3.5),
+        JPair("doubleTest", 330.65),
         JPair("strTest", std::string("This is a test str")),
         JPair("constCharTest", "This is a  const char* str"),
         JPair("hObj", std::move(h)),
@@ -20,7 +20,7 @@ void CreateJsonTest()
                 JPair("child", "childStr"),
                 JPair("childBool", false),
                 JPair("childInt", 339),
-                JPair("childArr", JArray({3,6,9,12,15,18,21,24,27,30}))
+                JPair("childArr", new JArr{93,6,9,12,15,18,21,24,27,30})
             }),
         
         JPair("intArr", new JArr{ 5,2,3,4,5 }),
