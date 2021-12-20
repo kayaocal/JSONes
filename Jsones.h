@@ -91,9 +91,9 @@ namespace Jsones
         explicit JNumber(double s);
         ~JNumber() override;
         bool IsInteger();
-        int AsInt();
-        float AsFloat();
-        double AsDouble();
+        int AsInt() const;
+        float AsFloat() const;
+        double AsDouble() const;
 
     };
 

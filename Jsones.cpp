@@ -495,17 +495,17 @@ namespace Jsones
         return true;
     }
 
-    int JNumber::AsInt()
+    int JNumber::AsInt() const
     {
         return std::stoi(str);
     }
 
-    float JNumber::AsFloat()
+    float JNumber::AsFloat() const
     {
         return std::stof(str);
     }
 
-    double JNumber::AsDouble()
+    double JNumber::AsDouble() const
     {
         return std::stod(str);
     }
