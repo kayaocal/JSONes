@@ -124,7 +124,7 @@ namespace Jsones
     /// @brief JObj is JsonObject. JObj contains map<string, JVal> objects and it's parent object.
     struct JSONES_API JObj : public JVal
     {
-        std::map<std::string, JVal*> objects;
+        std::map<uint32_t, JVal*> objects;
         JVal* parentObj;
 
         /// @brief Constructor
@@ -133,17 +133,17 @@ namespace Jsones
         ~JObj() override;
 
         JObj(JObj&& objR) noexcept;
+        //JObj(std::initializer_list<std::pair<uint32_t, JVal*>> list);
         JObj(const JObj&) = delete;
 
-        JObj(std::initializer_list<std::pair<std::string, JVal*>>);
+        JObj(std::initializer_list<std::pair<uint32_t, JVal*>>);
 
-        void Add(std::pair<std::string, JVal*> add);
-        void Add(std::pair<std::string, JArr*> add);
-        void Add(std::pair<std::string, JObj*> add);
+        void Add(std::pair<uint32_t, JVal*> add);
+        void Add(std::pair<uint32_t, JArr*> add);
+        void Add(std::pair<uint32_t, JObj*> add);
+        JVal* Get(uint32_t hash);
 
 
-        /// @brief This function returns JVal* with given key. *Might return nullptr if given key does not exist!* 
-        JVal* Get(const std::string& key);
         /// @brief This function returns JObj* with given key. *Might return nullptr if given key does not exist or cant cast!* 
         JObj* GetObj(const std::string& key);
 

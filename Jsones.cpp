@@ -2,6 +2,8 @@
 #include <iostream>
 #include "Jsones.h"
 
+#include "build/lookup3.h"
+
 
 namespace Jsones
 {
@@ -38,23 +40,8 @@ namespace Jsones
     std::string GetStr(const char* str, int b, int e);
 
     bool strCmp(const char* str, int beg, int end, const char* comp);
-    std::vector<std::string> strCache[255];
-    int GetKeyIndex(const char* str, int beg, int end)
-    {
-        char v = str[beg];
-        
-        auto it = strCache[v].begin();
-        for(int i = 0; i < strCache[v].size(); i++) 
-        {
-            if(strCmp(str, beg, end, strCache[v][i].c_str()))
-            {
-                return i;
-            }
-        }
-    
-        strCache[v].push_back(GetStr(str, beg, end));
-        return strCache[v].size()-1;
-    }
+    std::map<uint32_t, std::string> stringHashes;
+
     
     void Tokenize(const char* js, std::vector<Token*>& tokens)
     {
@@ -398,6 +385,18 @@ namespace Jsones
         s.append(&str[b], e- b);
         return s;
     }
+    
+    uint32_t GetStrHast(const char* str, int b, int e)
+    {
+        uint32_t hash = Oyun::hashlittle(&str[b], e-b, 0);
+        auto it = stringHashes.begin();
+        auto found = stringHashes.find(hash);
+        if(found == stringHashes.end())
+        {
+            stringHashes.insert(std::pair<uint32_t, std::string>(hash, GetStr(str, b, e)));
+        }
+        return hash;
+    }
     JObj* ParseJObj(JVal* parent, std::vector<Token*>& tokens, int& index, const char* str)
     {
         JObj* obj = new JObj(parent);
@@ -430,21 +429,21 @@ namespace Jsones
             }
             else if(tokens[i]->type == TokenType::COMMA)
             {
-                obj->Add(std::pair<std::string, JVal*>(GetStr(str, keyStart, keyEnd), GetValueTypeByString(str, keyStart, keyEnd)));
+                obj->Add(std::pair<uint32_t, JVal*>(GetStrHast(str, keyStart, keyEnd), GetValueTypeByString(str, keyStart, keyEnd)));
                 setKey = true;
             }
             else if(tokens[i]->type == TokenType::CURLY_BRACKET_OPEN)
             {
                 if(!setKey)
                 {
-                    obj->Add(std::pair<std::string, JVal*>(GetStr(str, keyStart, keyEnd), ParseJObj(obj, tokens, i, str)));
+                    obj->Add(std::pair<uint32_t, JVal*>(GetStrHast(str, keyStart, keyEnd), ParseJObj(obj, tokens, i, str)));
                 }
             }
             else if(tokens[i]->type == TokenType::CURLY_BRACKET_CLOSE)
             {
                 if(!setKey)
                 {
-                    obj->Add(std::pair<std::string, JVal*>(GetStr(str, keyStart, keyEnd), GetValueTypeByString(str, valueStart, valueEnd)));
+                    obj->Add(std::pair<uint32_t, JVal*>(GetStrHast(str, keyStart, keyEnd), GetValueTypeByString(str, valueStart, valueEnd)));
                 }
                 index = i;
                 return obj;
@@ -453,7 +452,7 @@ namespace Jsones
             {
                 if(!setKey)
                 {
-                    obj->Add(std::pair<std::string, JVal*>(GetStr(str, keyStart, keyEnd), ParseJArray(obj, tokens, i, str)));
+                    obj->Add(std::pair<uint32_t, JVal*>(GetStrHast(str, keyStart, keyEnd), ParseJArray(obj, tokens, i, str)));
                 }
             }
             
@@ -662,7 +661,7 @@ namespace Jsones
     }
 
 
-    JObj::JObj(std::initializer_list<std::pair<std::string, JVal*>> list)
+    JObj::JObj(std::initializer_list<std::pair<uint32_t, JVal*>> list)
         : JVal(JType::OBJ), parentObj(nullptr)
     {
         auto it = list.begin();
@@ -673,26 +672,26 @@ namespace Jsones
         }
     }
 
-    void JObj::Add(std::pair<std::string, JVal*> add)
+    void JObj::Add(std::pair<uint32_t, JVal*> add)
     {
         objects.insert(add);
     }
 
-    void JObj::Add(std::pair<std::string, JArr*> add)
-    {
-        objects.insert(add);
-        add.second->parentObj = this;
-    }
-
-    void JObj::Add(std::pair<std::string, JObj*> add)
+    void JObj::Add(std::pair<uint32_t, JArr*> add)
     {
         objects.insert(add);
         add.second->parentObj = this;
     }
 
-    JVal* JObj::Get(const std::string& key)
+    void JObj::Add(std::pair<uint32_t, JObj*> add)
     {
-        auto found = objects.find(key);
+        objects.insert(add);
+        add.second->parentObj = this;
+    }
+
+    JVal* JObj::Get(uint32_t hash)
+    {
+        auto found = objects.find(hash);
         if (found != objects.end())
         {
             std::cout << "Succesfully Found!" << std::endl;
@@ -705,7 +704,7 @@ namespace Jsones
 
     JObj* JObj::GetObj(const std::string& key)
     {
-        JVal* val = Get(key);
+        JVal* val = Get(Oyun::hashlittle(key.c_str(), key.length(), 0));
         assert(val != nullptr, "Given key is exist");
         assert(val->type == JType::OBJ, "Given key is not an JObj*");
 
@@ -714,7 +713,7 @@ namespace Jsones
 
     JArr* JObj::GetArr(const std::string& key)
     {
-        JVal* val = Get(key);
+        JVal* val = Get(Oyun::hashlittle(key.c_str(), key.length(), 0));
         assert(val != nullptr, "Given key is exist");
         assert(val->type == JType::ARR, "Given key is not an JArr*");
 
@@ -723,7 +722,7 @@ namespace Jsones
 
     JVal& JObj::operator[](const std::string& str)
     {
-        JVal* val = Get(str);
+        JVal* val = Get(Oyun::hashlittle(str.c_str(), str.length(), 0));
         jassert(val!=nullptr, "given key is not exist");
         return *val;
     }
@@ -955,10 +954,7 @@ namespace Jsones
             }
             else if (m.second->type == JType::ARR)
             {
-                if (m.first != "")
-                {
-                    ss << "\"" << m.first << "\"" << Space(beautify) << ":";
-                }
+                ss << "\"" << m.first << "\"" << Space(beautify) << ":";
                 ss << JWrite(dynamic_cast<JArr*>(m.second), beautify, tab).rdbuf();
             }
             else if (root->type == JType::OBJ)
