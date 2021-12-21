@@ -293,7 +293,7 @@ namespace Jsones
 
     bool strCmp(const char* str, int beg, int end, const char* comp)
     {
-        if(strlen(comp) < end - beg)
+        if(strlen(comp) != end - beg)
         {
             return false;
         }
@@ -312,7 +312,7 @@ namespace Jsones
     JVal* GetValueTypeByString(const char* str, int beg, int end)
     {
         bool isNumber = true;
-        if (strlen(str) == 0)
+        if (beg == end)
         {
             isNumber = false;
         }
@@ -352,7 +352,6 @@ namespace Jsones
     {
         JArr* array = new JArr(parent);
         bool valueSetted = false;
-        std::string value = "";
 
         int valueBeg = 0;
         int valueEnd = 0;
@@ -364,7 +363,6 @@ namespace Jsones
                 {
                     array->PushBack(GetValueTypeByString(str, tokens[i]->beginIndex, tokens[i]->endIndex));
                     valueSetted = false;
-                    value = "";
                 }
                 index = i;
                 return array;
@@ -380,7 +378,6 @@ namespace Jsones
                  {
                     array->PushBack(GetValueTypeByString(str, valueBeg, valueEnd));
                     valueSetted = false;
-                     value = "";
                  }
             }
             else if(tokens[i]->type == TokenType::KEY)
