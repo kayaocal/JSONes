@@ -82,9 +82,9 @@ namespace Jsones
     struct JSONES_API JStr : public JVal
     {
         const char* str;
-        int begin;
-        int end;
-        JStr(const char* str, int beg, int end);
+        size_t begin;
+        size_t end;
+        JStr(const char* str, size_t beg, size_t end);
 
         ~JStr() override;
 
@@ -94,9 +94,9 @@ namespace Jsones
     struct JSONES_API JNumber : public JVal
     {
         const char * str;
-        int begin;
-        int end;
-        JNumber(const char* s, int b, int e);
+        size_t begin;
+        size_t end;
+        JNumber(const char* s, size_t b, size_t e);
         // explicit JNumber(int s);
         // explicit JNumber(float s);
         // explicit JNumber(double s);

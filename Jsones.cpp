@@ -21,10 +21,10 @@ namespace Jsones
     struct Token
     {
         TokenType type;
-        int beginIndex;
-        int endIndex;
+        size_t beginIndex;
+        size_t endIndex;
 
-        Token(TokenType ty, int begin, int end)
+        Token(TokenType ty, size_t begin, size_t end)
             : type(ty), beginIndex(begin), endIndex(end)
         {
         }
@@ -42,11 +42,22 @@ namespace Jsones
     bool strCmp(const char* str, int beg, int end, const char* comp);
     std::map<uint32_t, std::string> stringHashes;
 
+    Token* TokenPtrComma = new Token(TokenType::COMMA);
+    Token* TokenPtrColon = new Token(TokenType::COLON);
+    Token* TokenPtrCurlyBracketOpen = new Token(TokenType::CURLY_BRACKET_OPEN);
+    Token* TokenPtrCurlyBracketClose = new Token(TokenType::CURLY_BRACKET_CLOSE);
+    Token* TokenPtrAngleBracketOpenToken = new Token(TokenType::ANGLE_BRACKET_OPEN);
+    Token* TokenPtrAngleBracketClose = new Token(TokenType::ANGLE_BRACKET_CLOSE);
+
+
+
     
+
+
+
     void Tokenize(const char* js, std::vector<Token*>& tokens)
     {
         bool keyStarted = false;
-        std::string key;
         size_t len = strlen(js);
         bool dittoMarked = false;
         int indexS;
@@ -68,34 +79,21 @@ namespace Jsones
                 {
                     keyStarted = false;
                     tokens.push_back(new Token(TokenType::KEY, indexS, i));
-                    tokens.push_back(new Token(TokenType::COMMA));
+                    tokens.push_back(TokenPtrComma);
                 }
                 else if (js[i] == '}' && !dittoMarked)
                 {
                     keyStarted = false;
                     tokens.push_back(new Token(TokenType::KEY, indexS, i));
-                    tokens.push_back(new Token(TokenType::CURLY_BRACKET_CLOSE));
+                    tokens.push_back(TokenPtrCurlyBracketClose);
                 }
                 else if (js[i] == ']' && !dittoMarked)
                 {
                     keyStarted = false;
                     tokens.push_back(new Token(TokenType::KEY, indexS, i));
-                    tokens.push_back(new Token(TokenType::ANGLE_BRACKET_CLOSE));
+                    tokens.push_back(TokenPtrAngleBracketClose);
                 }
-                else
-                {
-                    if (js[i] == ' ')
-                    {
-                        if (dittoMarked)
-                        {
-                            key.append(1, js[i]);
-                        }
-                    }
-                    else
-                    {
-                        key.append(1, js[i]);
-                    }
-                }
+             
                 continue;
             }
 
@@ -106,42 +104,40 @@ namespace Jsones
 
             else if (js[i] == '{')
             {
-                tokens.push_back(new Token(TokenType::CURLY_BRACKET_OPEN));
+                tokens.push_back(TokenPtrCurlyBracketOpen);
             }
             else if (js[i] == '}')
             {
-                tokens.push_back(new Token(TokenType::CURLY_BRACKET_CLOSE));
+                tokens.push_back(TokenPtrCurlyBracketClose);
             }
             else if (js[i] == '[')
             {
-                tokens.push_back(new Token(TokenType::ANGLE_BRACKET_OPEN));
+                tokens.push_back(TokenPtrAngleBracketOpenToken);
             }
             else if (js[i] == ']')
             {
-                tokens.push_back(new Token(TokenType::ANGLE_BRACKET_CLOSE));
+                tokens.push_back(TokenPtrAngleBracketClose);
             }
             else if (js[i] == ',')
             {
-                tokens.push_back(new Token(TokenType::COMMA));
+                tokens.push_back(TokenPtrComma);
             }
             else if (js[i] == ':')
             {
-                tokens.push_back(new Token(TokenType::COLON));
+                tokens.push_back(TokenPtrColon);
             }
             else if (js[i] == '\"')
             {
                 dittoMarked = true;
                 keyStarted = true;
                 indexS = i;
-                key = "";
             }
             else
             {
-                key = "";
-                key.append(1, js[i]);
                 keyStarted = true;
                 indexS = i;
             }
+          
         }
 
     }
@@ -554,7 +550,7 @@ namespace Jsones
     }
 
 
-    JStr::JStr(const char* s, int b, int e)
+    JStr::JStr(const char* s, size_t b, size_t e)
         :JVal(JType::STR), str(s), begin(b), end(e)
     {
     }
@@ -568,7 +564,7 @@ namespace Jsones
       return std::string();
     }
 
-    JNumber::JNumber(const char* s, int b, int e)
+    JNumber::JNumber(const char* s, size_t b, size_t e)
         :JVal(JType::NUM), str(s), begin(b), end(e)
     {
     }
@@ -823,7 +819,10 @@ namespace Jsones
         //JObj* obj = ParseJObj(nullptr, tokens, index, str);
         for (auto token : tokens)
         {
-            delete token;
+            if(token->type == TokenType::KEY)
+            {
+                delete token;
+            }
         }
 
         return nullptr;
