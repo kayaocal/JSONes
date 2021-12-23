@@ -35,7 +35,7 @@
 
 namespace Jsones
 {
-    enum class JSONES_API JType
+    enum class JSONES_API JType : char
     {
         NUL = 0,
         OBJ = 1,
