@@ -75,6 +75,22 @@ namespace Jsones
     {
         return std::string("Json Parse Error at line ") + std::to_string(line) + " and line index : " + std::to_string(lineIndex);
     }
+
+    bool CStrSubCompare(const char* str, size_t beg, size_t end, const char* comp);
+    bool CStrSubIsNumber(const char* str, size_t beg, size_t end);
+    bool IsKeywordValid(const char* str, int b, int e)
+    {
+        if (CStrSubCompare(str, b, e, "null") ||
+            CStrSubCompare(str, b, e, "true") ||
+            CStrSubCompare(str, b, e, "false") || 
+            CStrSubIsNumber(str, b, e))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
     bool Tokenize(const char* js, std::vector<Token*>& tokens)
     {
         bool keyStarted = false;
@@ -103,6 +119,10 @@ namespace Jsones
                 }
                 else if (js[i] == ',' && !dittoMarked)
                 {
+                    if (!IsKeywordValid(js, indexS, i))
+                    {
+                        return false;
+                    }
                     keyStarted = false;
                     tokens.push_back(new StrToken(TokenType::KEY, indexS, i));
                     tokens.push_back(TokenPtrComma);
@@ -110,6 +130,10 @@ namespace Jsones
                 }
                 else if (js[i] == '}' && !dittoMarked)
                 {
+                    if (!IsKeywordValid(js, indexS, i))
+                    {
+                        return false;
+                    }
                     keyStarted = false;
                     tokens.push_back(new StrToken(TokenType::KEY, indexS, i));
                     tokens.push_back(TokenPtrCurlyBracketClose);
@@ -117,12 +141,16 @@ namespace Jsones
                 }
                 else if (js[i] == ']' && !dittoMarked)
                 {
+                    if (!IsKeywordValid(js, indexS, i))
+                    {
+                        return false;
+                    }
                     keyStarted = false;
                     tokens.push_back(new StrToken(TokenType::KEY, indexS, i));
                     tokens.push_back(TokenPtrAngleBracketClose);
                     prevToken = TokenPtrAngleBracketClose;
                 }
-                else if(!dittoMarked && ((js[i] < '0' || js[i] > '9') && js[i] != '.' && js[i] != ','))
+                else if(!dittoMarked && ((js[i] < '0' || js[i] > '9') && js[i] != '.' && js[i] != ',') && (js[i] < 'a' || js[i] > 'z'))
                 {
                     return false;
                 }
@@ -197,7 +225,7 @@ namespace Jsones
             }
             else if (js[i] == '\"')
             {
-                if(prevToken != TokenPtrColon && prevToken != TokenPtrComma && prevToken != TokenPtrCurlyBracketOpen)
+                if(prevToken != TokenPtrColon && prevToken != TokenPtrComma && prevToken != TokenPtrCurlyBracketOpen && prevToken != TokenPtrAngleBracketOpenToken)
                 {
                     return false;
                 }
@@ -207,7 +235,7 @@ namespace Jsones
             }
             else
             {
-                if(prevToken != TokenPtrColon)
+                if(prevToken != TokenPtrColon && (js[i] != 'n' && js[i] != 'u' && js[i] != 'l')) // object can be null. Ugly solution
                 {
                     return false;
                 }
@@ -230,6 +258,25 @@ namespace Jsones
         std::string s= "";
         s.append(&str[b], e- b);
         return s;
+    }
+
+    bool CStrSubIsNumber(const char* str, size_t beg, size_t end)
+    {
+        bool isNumber = true;
+        if (beg == end)
+        {
+            isNumber = false;
+        }
+        for (size_t i = beg; i < end; i++)
+        {
+            if (str[i] != '.' && (str[i] < '0' || str[i] > '9'))
+            {
+                isNumber = false;
+                break;
+            }
+        }
+
+        return isNumber;
     }
 
     bool CStrSubCompare(const char* str, size_t beg, size_t end, const char* comp)
@@ -273,18 +320,8 @@ namespace Jsones
 
     JVal* GetValueTypeBySubCStr(const char* str, size_t beg, size_t end)
     {
-        bool isNumber = true;
-        if (beg == end)
-        {
-            isNumber = false;
-        }
-        for (size_t i = beg; i < end; i++)
-        {
-            if (str[i] != '.' && (str[i] < '0' || str[i] > '9'))
-            {
-                isNumber = false;
-            }
-        }
+        bool isNumber = CStrSubIsNumber(str, beg, end);
+        
 
         if (isNumber)
         {
