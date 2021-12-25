@@ -1,13 +1,14 @@
 #include <iostream>
 #include <fstream>
 #include "Jsones.h"
+
+
 #include "lookup3.h"
 
 
 
 namespace Jsones
 {
-
     //*********************************************** ***** **********************************************
     //******************************************** Tokenizing ********************************************
 
@@ -151,7 +152,9 @@ namespace Jsones
             }
         }
     }
-    
+
+    JArr* ParseJArray(JArr* arr, std::vector<Token*>& tokens, int& index, const char* str);
+    JObj* ParseJObj(JObj* o, std::vector<Token*>& tokens, int& index, const char* str);
     //********************************************* Tokenizing *******************************************
     //*********************************************** ***** **********************************************
     //********************************************** Helpers *********************************************
@@ -332,7 +335,7 @@ namespace Jsones
             return;
         }
 
-         for (auto it :arr->arr)
+         for (auto it :arr->array)
         {
             
             if (it->type == JType::OBJ)
@@ -361,7 +364,6 @@ namespace Jsones
 
     JVal::~JVal()
     {
-        //std::cout<<"DELETED : " << ToString(); 
     }
 
     void JVal::operator=(const int& v)
@@ -424,6 +426,21 @@ namespace Jsones
         }
     }
     std::string valueStr{"!value!"};
+
+    void JVal::operator=(const JObj& o)
+    {
+        jassert(type == JType::OBJ, "const char* type can only be assigned to JObj types");
+        JObj* obj = dynamic_cast<JObj*>(this);
+        *obj = o;
+    }
+
+    void JVal::operator=(JObj&& o)
+    {
+        jassert(type == JType::OBJ, "const char* type can only be assigned to JObj types");
+        JObj* obj = dynamic_cast<JObj*>(this);
+        *obj = std::move(o);
+    }
+
     std::string& JVal::ToString()
     {
         return valueStr;
@@ -477,6 +494,12 @@ namespace Jsones
     {
     }
 
+    JStr::JStr(const JStr& s) noexcept
+    :JVal(JType::STR), str(s.str)
+    {
+        
+    }
+
     JStr::~JStr()
     {
     }
@@ -509,6 +532,11 @@ namespace Jsones
     
     JNumber::JNumber(double d)
     : JVal(JType::NUM), str(std::to_string(d))
+    {
+    }
+
+    JNumber::JNumber(const JNumber& n) noexcept
+    :JVal(JType::NUM), str(n.str)
     {
     }
 
@@ -559,6 +587,12 @@ namespace Jsones
     {
     }
 
+    JBool::JBool(const JBool& b) noexcept
+    :JVal(JType::BOOL), val(b.val)
+    {
+        
+    }
+
     JBool::~JBool()
     {
     }
@@ -583,7 +617,6 @@ namespace Jsones
     {
         for (auto m : objects)
         {
-            //std::cout<<"[DELETE] : " << m.first<<std::endl;
             delete m.second;
         }
     }
@@ -595,9 +628,65 @@ namespace Jsones
     }
 
     JObj::JObj(const JObj& o) noexcept
-    :JVal(JType::OBJ), objects(o.objects)
+    :JVal(JType::OBJ)
     {
-        
+        for(auto it : o.objects)
+        {
+            JVal* ptr = nullptr;
+            
+            if(it.second->type == JType::NUL)
+            {
+                ptr = new JNull();
+            }
+            else if(it.second->type == JType::OBJ)
+            {
+                JObj* obj = static_cast<JObj*>(it.second);
+                ptr = new JObj(*obj);
+            }
+            else if(it.second->type == JType::NUM)
+            {
+                JNumber* num = static_cast<JNumber*>(it.second);
+                ptr = new JNumber(*num);
+            }
+            else if(it.second->type == JType::STR)
+            {
+                JStr* s = static_cast<JStr*>(it.second);
+                ptr = new JStr(*s);
+            }
+             else if(it.second->type == JType::BOOL)
+            {
+                JBool* b = static_cast<JBool*>(it.second);
+                ptr = new JBool(*b);
+            }
+             else if(it.second->type == JType::ARR)
+            {
+                 JArr* a = static_cast<JArr*>(it.second);
+                ptr = new JArr(*a);
+            }
+            else
+            {
+                 jassert(false, "Undefined Copy!");
+            }
+          
+            objects.insert(std::pair<uint32_t, JVal*>(it.first, ptr));
+        }
+    }
+
+    JObj::JObj(const char* str)
+        :JVal(JType::OBJ)
+    {
+        std::vector<Token*> tokens;
+        Tokenize(str, tokens);
+        int index = 0;
+        ParseJObj(this, tokens, index, str);
+
+        for (auto token : tokens)
+        {
+            if(token->type == TokenType::KEY)
+            {
+                delete token;
+            }
+        }
     }
 
 
@@ -658,11 +747,83 @@ namespace Jsones
         return dynamic_cast<JArr*>(val);
     }
 
+    void JObj::RemoveKeyValue(const std::string& key)
+    {
+        auto it = objects.find(GetHash(key));
+        if(it!=objects.end())
+        {
+            delete it->second;
+            objects.erase(it);
+        }
+    }
+
     JVal& JObj::operator[](const std::string& str)
     {
         JVal* val = Get(Oyun::hashlittle(str.c_str(), str.length(), 0));
         jassert(val!=nullptr, "given key is not exist");
         return *val;
+    }
+
+    void JObj::operator=(const JObj& o)
+    {
+        for(auto it : objects)
+        {
+            delete it.second;
+        }
+
+        objects.clear();
+        
+        for(auto it : o.objects)
+        {
+            JVal* ptr = nullptr;
+            
+            if(it.second->type == JType::NUL)
+            {
+                ptr = new JNull();
+            }
+            else if(it.second->type == JType::OBJ)
+            {
+                JObj* obj = static_cast<JObj*>(it.second);
+                ptr = new JObj(*obj);
+            }
+            else if(it.second->type == JType::NUM)
+            {
+                JNumber* num = static_cast<JNumber*>(it.second);
+                ptr = new JNumber(*num);
+            }
+            else if(it.second->type == JType::STR)
+            {
+                JStr* s = static_cast<JStr*>(it.second);
+                ptr = new JStr(*s);
+            }
+             else if(it.second->type == JType::BOOL)
+            {
+                JBool* b = static_cast<JBool*>(it.second);
+                ptr = new JBool(*b);
+            }
+             else if(it.second->type == JType::ARR)
+            {
+                 JArr* a = static_cast<JArr*>(it.second);
+                ptr = new JArr(*a);
+            }
+            else
+            {
+                 jassert(false, "Undefined Copy!");
+            }
+          
+            objects.insert(std::pair<uint32_t, JVal*>(it.first, ptr));
+        }
+    }
+
+    void JObj::operator=(JObj&& o)
+    {
+        for(auto it : objects)
+        {
+            delete it.second;
+        }
+
+        objects.clear();
+        objects = std::move(o.objects);
     }
 
     //*********************************************** JObj ***********************************************
@@ -672,12 +833,12 @@ namespace Jsones
 
     void JArr::PushBack(JVal* val)
     {
-        arr.push_back(val);
+        array.push_back(val);
     }
 
     void JArr::PushBack(const char* str, int b, int e)
     {
-        arr.push_back(new JStr(str, b, e));
+        array.push_back(new JStr(str, b, e));
     }
 
     JArr::JArr()
@@ -687,102 +848,233 @@ namespace Jsones
 
     JArr::~JArr()
     {
-        //std::cout<<"Delete Array";
-        for (auto m : arr)
+        for (auto m : array)
         {
-            //std::cout<<"[DELETE ARR ELEMENT] : " << m->ToString()<<std::endl;
             delete m;
         }
     }
 
-    JArr::JArr(JArr&& ar): JVal(JType::ARR),  arr(std::move(ar.arr)) 
+    JArr::JArr(JArr&& ar): JVal(JType::ARR),  array(std::move(ar.array)) 
     {
-        std::cout<<"MoveCtor"<<std::endl;
     }
 
-
     JArr::JArr(const JArr& ar)
-        :JVal(JType::ARR), arr(ar.arr)
+        :JVal(JType::ARR)
     {
-        std::cout<<"CopyCtor"<<std::endl;
+        for(auto it : ar.array)
+        {
+            JVal* ptr = nullptr;
+            
+            if(it->type == JType::NUL)
+            {
+                ptr = new JNull();
+            }
+            else if(it->type == JType::OBJ)
+            {
+                JObj* obj = static_cast<JObj*>(it);
+                ptr = new JObj(*obj);
+            }
+            else if(it->type == JType::NUM)
+            {
+                JNumber* num = static_cast<JNumber*>(it);
+                ptr = new JNumber(*num);
+            }
+            else if(it->type == JType::STR)
+            {
+                JStr* s = static_cast<JStr*>(it);
+                ptr = new JStr(*s);
+            }
+             else if(it->type == JType::BOOL)
+            {
+                JBool* b = static_cast<JBool*>(it);
+                ptr = new JBool(*b);
+            }
+             else if(it->type == JType::ARR)
+            {
+                 JArr* a = static_cast<JArr*>(it);
+                ptr = new JArr(*a);
+            }
+            else
+            {
+                 jassert(false, "Undefined Copy!");
+            }
+
+            array.push_back(ptr);
+        }
+    }
+
+    JArr::JArr(const char* str)
+        :JVal(JType::ARR)
+    {
+        std::vector<Token*> tokens;
+        Tokenize(str, tokens);
+        int index = 0;
+        ParseJArray(this, tokens, index, str);
+        //PrintArray(arr, 0);
+
+        for (auto token : tokens)
+        {
+            if(token->type == TokenType::KEY)
+            {
+                delete token;
+            }
+        }
     }
 
 
     JArr& JArr::Add(const JObj& o)
     {
         JObj* obj = new JObj(o);
-        arr.push_back(obj);
+        array.push_back(obj);
         return *this;
     }
 
     JArr& JArr::Add(JObj&& o)
     {
         JObj* obj = new JObj(std::move(o));
-        arr.push_back(obj);
+        array.push_back(obj);
         return *this;
     }
 
     void JArr::Add(JObj* obj)
     {
-        arr.push_back(obj);
+        array.push_back(obj);
     }
 
     void JArr::Add(double value)
     {
-        arr.push_back(new JNumber(value));
+        array.push_back(new JNumber(value));
     }
 
     void JArr::Add(int value)
     {
-        arr.push_back(new JNumber(value));
+        array.push_back(new JNumber(value));
     }
     
     void JArr::Add(float value)
     {
-        arr.push_back(new JNumber(value));
+        array.push_back(new JNumber(value));
     }
 
     void JArr::Add(const char* str, int b, int e)
     {
-        arr.push_back(new JStr(str, b, e));
+        array.push_back(new JStr(str, b, e));
     }
 
     void JArr::Add(bool value)
     {
-        arr.push_back(new JBool(value));
+        array.push_back(new JBool(value));
     }
 
     void JArr::Add(const char* str)
     {
         
-        arr.push_back(new JStr(std::move(str)));
+        array.push_back(new JStr(std::move(str)));
     }
 
     void JArr::Add(const std::string& str)
     {
-        arr.push_back(new JStr(str));
+        array.push_back(new JStr(str));
     }
 
     void JArr::Add(const std::string&& str)
     {
-        arr.push_back(new JStr(str));
+        array.push_back(new JStr(str));
+    }
+
+    void JArr::RemoveAt(int index)
+    {
+        if(index < 0 || index > array.size())
+        {
+            return;
+        }
+        
+        delete array[index];
+        array.erase(array.begin() + index);
     }
 
     JVal& JArr::operator[](int index)
     {
-        jassert(index < arr.size(), "JArr index exceeds vector size!");
-        return *arr[index];
+        jassert(index < array.size(), "JArr index exceeds vector size!");
+        return *array[index];
+    }
+
+    void JArr::operator=(const JArr& ar)
+    {
+        for(auto it : array)
+        {
+            delete it;
+        }
+
+        array.clear();
+        for(auto it : ar.array)
+        {
+            JVal* ptr = nullptr;
+            
+            if(it->type == JType::NUL)
+            {
+                ptr = new JNull();
+            }
+            else if(it->type == JType::OBJ)
+            {
+                JObj* obj = static_cast<JObj*>(it);
+                ptr = new JObj(*obj);
+            }
+            else if(it->type == JType::NUM)
+            {
+                JNumber* num = static_cast<JNumber*>(it);
+                ptr = new JNumber(*num);
+            }
+            else if(it->type == JType::STR)
+            {
+                JStr* s = static_cast<JStr*>(it);
+                ptr = new JStr(*s);
+            }
+             else if(it->type == JType::BOOL)
+            {
+                JBool* b = static_cast<JBool*>(it);
+                ptr = new JBool(*b);
+            }
+             else if(it->type == JType::ARR)
+            {
+                 JArr* a = static_cast<JArr*>(it);
+                ptr = new JArr(*a);
+            }
+            else
+            {
+                 jassert(false, "Undefined Copy!");
+            }
+
+            array.push_back(ptr);
+        }
+    }
+
+    void JArr::operator=(JArr&& ar)
+    {
+        for(auto it : array)
+        {
+            delete it;
+        }
+
+        array.clear();
+        array = std::move(ar.array);
     }
 
     //*********************************************** JArr ***********************************************
     //*********************************************** ***** **********************************************
     //********************************************** Parsing *********************************************
 
-    JObj* ParseJObj(std::vector<Token*>& tokens, int& index, const char* str);
+    JObj* ParseJObj(JObj* obj, std::vector<Token*>& tokens, int& index, const char* str);
     
-    JArr* ParseJArray(std::vector<Token*>& tokens, int& index, const char* str)
+    JArr* ParseJArray(JArr* arr, std::vector<Token*>& tokens, int& index, const char* str)
     {
-        JArr* array = new JArr();
+        
+        JArr* array = arr;
+        if(arr == nullptr)
+        {
+            array = new JArr();
+        }
+        
         bool valueSetted = false;
 
         size_t valueBeg = 0;
@@ -802,7 +1094,7 @@ namespace Jsones
 
             if(tokens[i]->type == TokenType::CURLY_BRACKET_OPEN)
             {
-                array->PushBack(ParseJObj(tokens, i, str));
+                array->PushBack(ParseJObj(nullptr, tokens, i, str));
             }
             else if(tokens[i]->type == TokenType::COMMA)
             {
@@ -826,10 +1118,13 @@ namespace Jsones
     }
 
    
-    JObj* ParseJObj(std::vector<Token*>& tokens, int& index, const char* str)
+    JObj* ParseJObj(JObj* o, std::vector<Token*>& tokens, int& index, const char* str)
     {
-        JObj* obj = new JObj();
-
+        JObj* obj = o;
+        if(obj==nullptr)
+        {
+            obj = new JObj();
+        }
 
         size_t keyStart = 0;
         size_t keyEnd = 0;
@@ -866,7 +1161,7 @@ namespace Jsones
             {
                 if(!setKey)
                 {
-                    obj->Add(std::pair<uint32_t, JVal*>(GetKeyHash(str, keyStart, keyEnd), ParseJObj(tokens, i, str)));
+                    obj->Add(std::pair<uint32_t, JVal*>(GetKeyHash(str, keyStart, keyEnd), ParseJObj(nullptr, tokens, i, str)));
                 }
             }
             else if(tokens[i]->type == TokenType::CURLY_BRACKET_CLOSE)
@@ -882,7 +1177,7 @@ namespace Jsones
             {
                 if(!setKey)
                 {
-                    obj->Add(std::pair<uint32_t, JVal*>(GetKeyHash(str, keyStart, keyEnd), ParseJArray(tokens, i, str)));
+                    obj->Add(std::pair<uint32_t, JVal*>(GetKeyHash(str, keyStart, keyEnd), ParseJArray(nullptr, tokens, i, str)));
                 }
             }
             
@@ -892,33 +1187,6 @@ namespace Jsones
         return obj;
     }
 
-    JObj* JParse(const char* str)
-    {
-        using namespace std;
-        vector<Token*> tokens;
-        Tokenize(str, tokens);
-        int index = 0;
-        JArr* arr = ParseJArray(tokens, index, str);
-        //PrintArray(arr, 0);
-
-        for (auto token : tokens)
-        {
-            if(token->type == TokenType::KEY)
-            {
-                delete token;
-            }
-        }
-
-
-        {
-            fstream stream;
-            stream.open("C:\\Development\\Jsones\\test.json", std::ifstream::out | std::ifstream::binary);
-            stream<<JWrite(arr, true).rdbuf();
-            stream.close();
-        }
-        return nullptr;
-    }
-    
     //********************************************** Parsing *********************************************
     //*********************************************** ***** **********************************************
     //********************************************** Writing *********************************************
@@ -977,7 +1245,7 @@ namespace Jsones
         ss << "[" << NewLine(beautify);
 
         bool subFirst = true;
-        for (auto it : arr->arr)
+        for (auto it : arr->array)
         {
             if (!subFirst)
             {

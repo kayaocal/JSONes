@@ -3,179 +3,112 @@
 * Just another small json parser and writer. It has no reflection or fancy specs.
 * It is tested with examples at json.org
 * **This library does not validate json yet!**
-* **null** type is not supported
 * Only standart library. No any other 3rd party library required.
 * Written in cpp 11.
 
 ## Use
-* Just copy Jsones.h and Jsones.cpp to your project.
+* Just copy Jsones.h and Jsones.cpp and lookup3.h to your project.
+* **lookup3.h** is written by **Bob Jenkins**
 
 ## Compile
 * Cmake can be used to generate project files
-
-## Structure
-```c++
-enum class JSONES_API JType{ OBJ = 1, NUM = 2, STR = 3, BOOL = 4, ARR = 5 };
-//base struct.
-struct JSONES_API JVal{
-    JType type;
-    ...
-};
-
-//struct for string value. Also type is JType::STR
-struct JSONES_API JStr : public JVal{...};
-
-//struct for number value as integer, float double. Also type is JType::NUM
-struct JSONES_API JNumber : public JVal{...}
-
-//struct for boolean value. Also type is JType::BOOL
-struct JSONES_API JBool : public JVal{...}
-
-//struct for json objects. Also type is JType::OBJ
-struct JSONES_API JObj : public  JVal
-{
-    std::map<std::string, JVal*> objects;
-    ...
-}
-
-//struct for json arrays. Also type is JType::ARR
-struct JSONES_API JArr : public JObj{
-    std::vector<JVal*> arr;
-    ...
-}
-```
 
 ## How to parse Json
 
 ```c++
 using namespace Jsones;
-JObj* parsedObj = JParse(s.c_str());
+
+const char* jsonArray = "[...]";
+JArr arr (jsonArray);
+
+const char* jsonObject = "{...}";
+JObj obj(jsonObject);
+
 ```
-## Delete Json
+
+## How to create Json
+
 ```c++
 using namespace Jsones;
 
-JObj* parsedObj = JParse(s.c_str());
-//It deletes all child values, objects and arrays.
-delete parsedObj;
+JObj obj{
+    JPair("StrKey", "StrValue"),
+    JPair("NumberKey", 333),
+    JPair("BoolKey", true),
+    JPair("IntArrayKey", JArr{1,2,3,4,5}),
+    JPair("StrArrayKey", JArr{"str1","str2", "str3"}),
+    JPair("SubObject", JObj{JPair("SubObjStrKey", "SubObjStrValue"), JPair("SubObjInt", 956)})
+    };
+    
+JArr arr{"str1","str2","str3"}
 
-//or
-JObj obj = JObject({JPair("integerTest", 9)}
-//It deletes all child values, objects and arrays.
-delete &obj;
 ```
-
-## How to change an object key's value
+## How to edit Json
 ```c++
 using namespace Jsones;
-JObj* parsedObj = JParse(s.c_str());
 
-//assertion if key is not exist or given value is not match with JVal type. 
-//E.g: if value is bool, you can only set it to JBool or if value is integer, 
-//then it can only be set to JNumber
-parsedObj->Set("key", value);
+JObj obj{
+    JPair("StrKey", "StrValue"),
+    JPair("NumberKey", 333)
+    };
 
-//or...
-//JObject returns JObj Refrence, You should delete JObj to prevent memory leak.
-JObj& obj = JObject({JPair("integerTest", 9)}
-obj["integerTest"] = 5155;
-```
+//Sets value of "NumberKey"    
+obj["NumberKey"] = 123;
 
-## How to change an array's nth element's value
-```c++
-using namespace Jsones;
-//Create array
-JArr arrRef = {3,5,8,12,5};
-//Change it's element
-arrRef[2] = 1222;
+//Removes and deletes object
+obj.RemoveKeyValue("StrKey");
 
-//or...
+JArr arr{"str1","str2","str3"}
 
-JArr* arr = new JArr{3, 4, 5, 6, 7, 8, 9};
-(*arr)[3] = 444;
+arr[0] = "newStr1";
+
+arr.RemoveAt(1);
+
+arr.Add("str4");
 
 ```
-
 ## How to write Json
 
 ```c++
 using namespace Jsones;
- JObj* obj = new JObj{
-        JPair("integerTest", 9),
-        JPair("boolTest", false),
-        JPair("floatTest", 3.5f),
-        JPair("doubleTest", 3.5),
-        JPair("strTest", std::string("This is a test str")),
-        JPair("constCharTest", "This is a  const char* str"),
-        JPair("childObj", new JObj{
-                JPair("child", "childStr"),
-                JPair("childBool", false),
-                JPair("childInt", 339),
-                JPair("childArr", new JArr{3,6,9,12,15,18,21,24,27,30})
-            }),
-        JPair("intArr", new JArr{ 5,2,3,4,5 }),
-        JPair("boolArr", new JArr{true, false,true,false}),
-        JPair("strArr", new JArr{ "hello", "world", "initalizer", "list" })
-    };
-std::string jsonOutput = JWrite(obj); //0 as tab(spacing) level and true for beautfy
-```
-Result of jsonOutput will be;
-```json
+//Arrays =>
+const char* jsonArray = "[...]";
+JArr arr (jsonArray);
 
-{"boolArr":[true,false,true,false],"boolTest":false,"childObj":{"child":"childStr","childArr":[3,6,9,12,15,18,21,24,27,30],"childBool":false,"childInt":339},"constCharTest":"This is a  const char* str","doubleTest":3.500000,"floatTest":3.500000,"intArr":[5,2,3,4,5],"integerTest":9,"strArr":["hello","world","initalizer","list"],"strTest":"This is a test str"}
+//true for beautify
+JWrite(&arr, true);
+
+//Objects =>
+const char* jsonObject = "{...}";
+JObj obj(jsonObject);
+
+//true for beautify
+JWrite(&obj, true);
 ```
-Also you can beautify json as following code
+## Structure
 ```c++
-std::string jsonOutput = JWrite(obj, true); //true for beautfy
-```
-```json
-{
-        "boolArr" :
-        [
-                 true,
-                 false,
-                 true,
-                 false
-        ],
-        "boolTest" : false,
-        "childObj" :
-                {
-                        "child" : "childStr",
-                        "childArr" :
-                        [
-                                 3,
-                                 6,
-                                 9,
-                                 12,
-                                 15,
-                                 18,
-                                 21,
-                                 24,
-                                 27,
-                                 30
-                        ],
-                        "childBool" : false,
-                        "childInt" : 339
-                },
-        "constCharTest" : "This is a  const char* str",
-        "doubleTest" : 3.500000,
-        "floatTest" : 3.500000,
-        "intArr" :
-        [
-                 5,
-                 2,
-                 3,
-                 4,
-                 5
-        ],
-        "integerTest" : 9,
-        "strArr" :
-        [
-                 "hello",
-                 "world",
-                 "initalizer",
-                 "list"
-        ],
-        "strTest" : "This is a test str"
-}
+enum class JSONES_API JType : char
+    {
+        NUL = 0,
+        OBJ = 1,
+        NUM = 2,
+        STR = 3,
+        BOOL = 4,
+        ARR = 5
+    };
+    
+    struct JSONES_API JVal { JType type; ... }
+    
+    struct JSONES_API JNull : public JVal { ... }
+    
+    struct JSONES_API JStr : public JVal { std::string str; ... }
+    
+    struct JSONES_API JNumber : public JVal {  std::string str; ... }
+    
+    struct JSONES_API JBool : public JVal { bool val; ... }
+       
+    struct JSONES_API JObj : public JVal { std::map<uint32_t, JVal*> objects; ... }
+    
+    struct JSONES_API JArr : public JVal { std::vector<JVal*> array; ... }
+
 ```

@@ -45,6 +45,8 @@ namespace Jsones
         ARR = 5
     };
 
+    struct JArr;
+    struct JObj;
 
     struct JSONES_API JVal
     {
@@ -66,6 +68,9 @@ namespace Jsones
         void operator =(const bool v);
         void operator =(const std::string& str);
         void operator =(const char* str);
+        void operator =(JObj* o);
+        void operator =(const JObj& o);
+        void operator =(JObj&& o);
 
         virtual std::string& ToString();
     };
@@ -86,6 +91,7 @@ namespace Jsones
         JStr(const std::string& str) noexcept;
         JStr(const std::string&& str) noexcept;
         JStr(const char* ch) noexcept;
+        JStr(const JStr& s) noexcept;
 
         ~JStr() override;
 
@@ -99,6 +105,7 @@ namespace Jsones
         explicit JNumber(int s);
         explicit JNumber(float s);
         explicit JNumber(double s);
+        JNumber(const JNumber& n) noexcept;
         ~JNumber() override;
         bool IsInteger();
         int AsInt() const;
@@ -113,12 +120,12 @@ namespace Jsones
     {
         bool val;
         JBool(bool b);
+        JBool(const JBool& b) noexcept;
         ~JBool() override;
 
         virtual std::string& ToString() override;
     };
 
-    struct JArr;
     
     /// @brief JObj is JsonObject. JObj contains map<string, JVal> objects and it's parent object.
     struct JSONES_API JObj : public JVal
@@ -133,6 +140,7 @@ namespace Jsones
         //JObj(std::initializer_list<std::pair<uint32_t, JVal*>> list);
         JObj(const JObj&) noexcept;
 
+        JObj(const char* str);
         JObj(std::initializer_list<std::pair<uint32_t, JVal*>>);
 
         void Add(std::pair<uint32_t, JVal*> add);
@@ -146,6 +154,8 @@ namespace Jsones
 
         JArr* GetArr(const std::string& key);
 
+        void RemoveKeyValue(const std::string& key);
+
         template <typename T>
         void Set(const std::string& key, T v)
         {
@@ -155,17 +165,21 @@ namespace Jsones
         }
 
         JVal& operator[](const std::string&);
+
+        void operator =(const JObj& o);
+        void operator =(JObj&& o);
     };
 
     struct JSONES_API JArr : public JVal
     {
-        std::vector<JVal*> arr;
+        std::vector<JVal*> array;
         
         /// @brief Constructor
         JArr();
         ~JArr() override;
         JArr(JArr&& ar);
         JArr(const JArr& ar);
+        JArr(const char* str);
 
         template <typename T>
         JArr(std::initializer_list<T> list)
@@ -192,8 +206,12 @@ namespace Jsones
         void Add(const std::string& str);
         void Add(const std::string&& str);
 
+        void RemoveAt(int index);
         JVal& operator[](int index);
 
+        void operator =(const JArr& o);
+        void operator =(JArr&& o);
+        
         void PushBack(JVal* val);
         void PushBack(const char* str, int b, int e);
     };
@@ -277,12 +295,14 @@ namespace Jsones
     //********************************************** ***** **********************************************
 
 
-    void PrintArray(JArr* arr, int tab);
-    void PrintObj(JObj* obj, int tab);
+    void PrintArray(JArr* arr, int tab = 0);
+    void PrintObj(JObj* obj, int tab = 0);
     
     /// @brief Parses json
     /// @return JObj
-    JSONES_API JObj* JParse(const char*);
+    JSONES_API JObj* JObject(const char*);
+    
+    JSONES_API JArr* JArray(const char*);
 
     /// @brief Converts JObj to json string
     /// @param root 
