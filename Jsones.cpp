@@ -1,13 +1,16 @@
-#include <sstream>
 #include <iostream>
 #include <fstream>
 #include "Jsones.h"
+#include "lookup3.h"
 
-#include "build/lookup3.h"
 
 
 namespace Jsones
 {
+
+    //*********************************************** ***** **********************************************
+    //******************************************** Tokenizing ********************************************
+
     enum class TokenType : char
     {
         CURLY_BRACKET_OPEN,
@@ -41,10 +44,21 @@ namespace Jsones
         {
         }
     };
-    std::string GetStr(const char* str, int b, int e);
 
-    bool strCmp(const char* str, int beg, int end, const char* comp);
-    std::map<uint32_t, std::string> stringHashes;
+    std::string Token::ToString() const
+    {
+        switch (type)
+        {
+        case TokenType::CURLY_BRACKET_OPEN: return std::string("CURLY_BRACKET_OPEN");
+        case TokenType::CURLY_BRACKET_CLOSE: return std::string("CURLY_BRACKET_CLOSE");
+        case TokenType::ANGLE_BRACKET_OPEN: return std::string("ANGLE_BRACKET_OPEN");
+        case TokenType::ANGLE_BRACKET_CLOSE: return std::string("ANGLE_BRACKET_CLOSE");
+        case TokenType::COLON: return std::string("COLON");
+        case TokenType::COMMA: return std::string("COMMA");
+        case TokenType::KEY: return std::string("KEY");
+        default: return std::string("NONE");
+        }
+    }
 
     Token* TokenPtrComma = new Token(TokenType::COMMA);
     Token* TokenPtrColon = new Token(TokenType::COLON);
@@ -52,7 +66,6 @@ namespace Jsones
     Token* TokenPtrCurlyBracketClose = new Token(TokenType::CURLY_BRACKET_CLOSE);
     Token* TokenPtrAngleBracketOpenToken = new Token(TokenType::ANGLE_BRACKET_OPEN);
     Token* TokenPtrAngleBracketClose = new Token(TokenType::ANGLE_BRACKET_CLOSE);
-
 
     void Tokenize(const char* js, std::vector<Token*>& tokens)
     {
@@ -136,86 +149,40 @@ namespace Jsones
                 keyStarted = true;
                 indexS = i;
             }
-          
         }
-
     }
-
-    // std::pair<std::string, JVal*> JPair(const std::string& key, const char* val)
-    // {
-    //     return std::pair<std::string, JVal*>(key, new JStr(val));
-    // }
-    //
-    // std::pair<std::string, JVal*> JPair(const std::string& key, const std::string& val)
-    // {
-    //     return std::pair<std::string, JVal*>(key, new JStr(val));
-    // }
-
-    // std::pair<std::string, JVal*> JPair(const std::string& key, double val)
-    // {
-    //     return std::pair<std::string, JVal*>(key, new JNumber(val));
-    // }
-    //
-    // std::pair<std::string, JVal*> JPair(const std::string& key, float val)
-    // {
-    //     return std::pair<std::string, JVal*>(key, new JNumber(val));
-    // }
-    //
-    // std::pair<std::string, JVal*> JPair(const std::string& key, bool val)
-    // {
-    //     return std::pair<std::string, JVal*>(key, new JBool(val));
-    // }
-    //
-    // std::pair<std::string, JVal*> JPair(const std::string& key, int val)
-    // {
-    //     return std::pair<std::string, JVal*>(key, new JNumber(val));
-    // }
-    //
-    // std::pair<std::string, JVal*> JPair(const std::string& key, JObj* val)
-    // {
-    //     return std::pair<std::string, JVal*>(key, val);
-    // }
-    //
-    //
-    // std::pair<std::string, JVal*> JPair(const std::string& key, JObj&& val)
-    // {
-    //     JObj* obj = new JObj(std::move(val));
-    //     return std::pair<std::string, JVal*>(key, obj);
-    // }
-    //
-    // std::pair<std::string, JVal*> JPair(const std::string& key, JArr* arr)
-    // {
-    //     return std::pair<std::string, JVal*>(key, arr);
-    // }
-    //
-    // std::pair<std::string, JVal*> JPair(const std::string& key, JArr&& arr)
-    // {
-    //     JArr* marr = new JArr(std::move(arr));
-    //     return std::pair<std::string, JVal*>(key, marr);
-    // }
-    //
-    // std::pair<std::string, JVal*> JPair(const std::string& key, JArr& arr)
-    // {
-    //     return std::pair<std::string, JVal*>(key, &arr);
-    // }
-    //
-    // JSONES_API std::pair<std::string, JVal*> JPair(const std::string& key, JVal* jVal)
-    // {
-    //     return JSONES_API std::pair<std::string, JVal*>(key, jVal);
-    // }
-
-    std::string PrintKey(uint32_t key)
+    
+    //********************************************* Tokenizing *******************************************
+    //*********************************************** ***** **********************************************
+    //********************************************** Helpers *********************************************
+    
+    std::string SubstrFromCharArray(const char* str, size_t b, size_t e)
     {
-        auto it  = stringHashes.find(key);
-        if(it!=stringHashes.end())
-        {
-            return it->second;
-        }
-
-        return "";
+        std::string s= "";
+        s.append(&str[b], e- b);
+        return s;
     }
 
-    const char* GetTypeStr(JType t)
+    bool CStrSubCompare(const char* str, size_t beg, size_t end, const char* comp)
+    {
+        if(strlen(comp) != end - beg)
+        {
+            return false;
+        }
+
+        int index = 0;
+        for(size_t i = beg; i < end; i++)
+        {
+            if(str[i] != comp[index])
+            {
+                return false;
+            }
+            index++;
+        }
+        return true;
+    }
+    
+    const char* GetJsonTypeCStr(JType t)
     {
         switch (t)
         {
@@ -234,6 +201,98 @@ namespace Jsones
             default: return "[NONE]";
         }
     }
+
+    JVal* GetValueTypeBySubCStr(const char* str, size_t beg, size_t end)
+    {
+        bool isNumber = true;
+        if (beg == end)
+        {
+            isNumber = false;
+        }
+        for (size_t i = beg; i < end; i++)
+        {
+            if (str[i] != '.' && (str[i] < '0' || str[i] > '9'))
+            {
+                isNumber = false;
+            }
+        }
+
+        if (isNumber)
+        {
+            return new JNumber(str, beg, end);
+        }
+        else if(CStrSubCompare(str,beg,end, "null"))
+        {
+            return new JNull();
+        }
+       else if(CStrSubCompare(str,beg,end, "false"))
+        {
+            return new JBool(false);
+        }
+        else if(CStrSubCompare(str,beg,end, "true"))
+        {
+            return new JBool(true);
+        }
+        else
+        {
+            return new JStr(str, beg, end);
+        }
+    }
+
+    uint32_t GetHash(const char* str)
+    {
+        return Oyun::hashlittle(str, strlen(str), 0);
+    }
+
+    uint32_t GetHash(const std::string& str)
+    {
+        return Oyun::hashlittle(str.c_str(), str.length(), 0);
+    }
+    
+    //********************************************** Helpers *********************************************
+    //*********************************************** ***** **********************************************
+    //******************************************** KeyHashing ********************************************
+    
+    std::map<uint32_t, std::string> KeyHashes;
+
+    std::string GetHashedString(uint32_t key)
+    {
+        auto it  = KeyHashes.find(key);
+        if(it!=KeyHashes.end())
+        {
+            return it->second;
+        }
+
+        return "";
+    }
+
+     uint32_t GetKeyHash(const std::string str)
+    {
+        uint32_t hash = GetHash(str);
+        auto it = KeyHashes.begin();
+        auto found = KeyHashes.find(hash);
+        if(found == KeyHashes.end())
+        {
+            KeyHashes.insert(std::pair<uint32_t, std::string>(hash, str));
+        }
+        return hash;
+    }
+
+     uint32_t GetKeyHash(const char* str, size_t b, size_t e)
+    {
+        uint32_t hash =  Oyun::hashlittle(&str[b], e-b, 0);
+        auto it = KeyHashes.begin();
+        auto found = KeyHashes.find(hash);
+        if(found == KeyHashes.end())
+        {
+            KeyHashes.insert(std::pair<uint32_t, std::string>(hash, SubstrFromCharArray(str, b, e)));
+        }
+        return hash;
+    }
+
+    //******************************************** KeyHashing ********************************************
+    //*********************************************** ***** **********************************************
+    //********************************************* Test Funcs *******************************************
     
     void PrintArray(JArr* arr, int tab);
     void PrintObj(JObj* obj, int tab)
@@ -249,23 +308,23 @@ namespace Jsones
             }
             if (m.second->type == JType::ARR)
             {
-                std::cout << "[ARR][" << PrintKey(m.first) << "] : ";
+                std::cout << "[ARR][" << GetHashedString(m.first) << "] : ";
 
                 PrintArray(dynamic_cast<JArr*>(m.second), tab);
                 
             }
             else if(m.second->type == JType::OBJ)
             {
-                std::cout << "[OBJ][" << PrintKey(m.first) << "] : ";
+                std::cout << "[OBJ][" << GetHashedString(m.first) << "] : ";
                 PrintObj(dynamic_cast<JObj*>(m.second), tab + 1);
             }
             else 
             {
-                std::cout << GetTypeStr(m.second->type)<<"[" << PrintKey(m.first) << "] : " << m.second->ToString();
+                std::cout << GetJsonTypeCStr(m.second->type)<<"[" << GetHashedString(m.first) << "] : " << m.second->ToString();
             }
         }
     }
-    
+
     void PrintArray(JArr* arr, int tab)
     {
         if (arr == nullptr)
@@ -290,192 +349,9 @@ namespace Jsones
         
     }
     
-    bool strCmp(const char* str, int beg, int end, const char* comp)
-    {
-        if(strlen(comp) != end - beg)
-        {
-            return false;
-        }
-
-        int index = 0;
-        for(int i = beg; i < end; i++)
-        {
-            if(str[i] != comp[index])
-            {
-                return false;
-            }
-            index++;
-        }
-        return true;
-    }
-    JVal* GetValueTypeByString(const char* str, int beg, int end)
-    {
-        bool isNumber = true;
-        if (beg == end)
-        {
-            isNumber = false;
-        }
-        for (int i = beg; i < end; i++)
-        {
-            if (str[i] != '.' && (str[i] < '0' || str[i] > '9'))
-            {
-                isNumber = false;
-            }
-        }
-
-        if (isNumber)
-        {
-            return new JNumber(str, beg, end);
-        }
-        else if(strCmp(str,beg,end, "null"))
-        {
-            return new JNull();
-        }
-       else if(strCmp(str,beg,end, "false"))
-        {
-            return new JBool(false);
-        }
-        else if(strCmp(str,beg,end, "true"))
-        {
-            return new JBool(true);
-        }
-        else
-        {
-            return new JStr(str, beg, end);
-        }
-    }
-
-    JObj* ParseJObj(JVal* parent, std::vector<Token*>& tokens, int& index, const char* str);
-    
-    JArr* ParseJArray(JVal* parent, std::vector<Token*>& tokens, int& index, const char* str)
-    {
-        JArr* array = new JArr(parent);
-        bool valueSetted = false;
-
-        int valueBeg = 0;
-        int valueEnd = 0;
-        for(int i = index; i < tokens.size(); i++)
-        {
-            if(tokens[i]->type == TokenType::ANGLE_BRACKET_CLOSE)
-            {
-                if(valueSetted)
-                {
-                    array->PushBack(GetValueTypeByString(str, valueBeg, valueEnd));
-                    valueSetted = false;
-                }
-                index = i;
-                return array;
-            }
-
-            if(tokens[i]->type == TokenType::CURLY_BRACKET_OPEN)
-            {
-                array->PushBack(ParseJObj(array, tokens, i, str));
-            }
-            else if(tokens[i]->type == TokenType::COMMA)
-            {
-                 if(valueSetted)
-                 {
-                    array->PushBack(GetValueTypeByString(str, valueBeg, valueEnd));
-                    valueSetted = false;
-                 }
-            }
-            else if(tokens[i]->type == TokenType::KEY)
-            {
-                StrToken* tkn = static_cast<StrToken*>(tokens[i]);
-                valueBeg = tkn->beginIndex;
-                valueEnd = tkn->endIndex;
-                valueSetted = true;
-            }
-        }
-        
-        index;
-        return array;
-    }
-
-    std::string GetStr(const char* str, int b, int e)
-    {
-        std::string s= "";
-        s.append(&str[b], e- b);
-        return s;
-    }
-    
-    uint32_t GetStrHash(const char* str, int b, int e)
-    {
-        uint32_t hash = Oyun::hashlittle(&str[b], e-b, 0);
-        auto it = stringHashes.begin();
-        auto found = stringHashes.find(hash);
-        if(found == stringHashes.end())
-        {
-            stringHashes.insert(std::pair<uint32_t, std::string>(hash, GetStr(str, b, e)));
-        }
-        return hash;
-    }
-    JObj* ParseJObj(JVal* parent, std::vector<Token*>& tokens, int& index, const char* str)
-    {
-        JObj* obj = new JObj(parent);
-
-
-        int keyStart = 0;
-        int keyEnd = 0;
-        int valueStart = 0;
-        int valueEnd = 0;
-        bool setKey = true;
-        
-        for(int i = index; i < tokens.size(); i++)
-        {
-            if(tokens[i]->type == TokenType::KEY)
-            {
-                StrToken* tkn = static_cast<StrToken*>(tokens[i]);
-                if(setKey)
-                {
-                    keyStart = tkn->beginIndex;
-                    keyEnd = tkn->endIndex;
-                }
-                else
-                {
-                    valueStart = tkn->beginIndex;
-                    valueEnd = tkn->endIndex;
-                }
-            }
-            else if(tokens[i]->type == TokenType::COLON)
-            {
-                setKey = !setKey;
-            }
-            else if(tokens[i]->type == TokenType::COMMA)
-            {
-                obj->Add(std::pair<uint32_t, JVal*>(GetStrHash(str, keyStart, keyEnd), GetValueTypeByString(str, valueStart, valueEnd)));
-                setKey = true;
-            }
-            else if(tokens[i]->type == TokenType::CURLY_BRACKET_OPEN)
-            {
-                if(!setKey)
-                {
-                    obj->Add(std::pair<uint32_t, JVal*>(GetStrHash(str, keyStart, keyEnd), ParseJObj(obj, tokens, i, str)));
-                }
-            }
-            else if(tokens[i]->type == TokenType::CURLY_BRACKET_CLOSE)
-            {
-                if(!setKey)
-                {
-                    obj->Add(std::pair<uint32_t, JVal*>(GetStrHash(str, keyStart, keyEnd), GetValueTypeByString(str, valueStart, valueEnd)));
-                }
-                index = i;
-                return obj;
-            }
-            else if(tokens[i]->type == TokenType::ANGLE_BRACKET_OPEN)
-            {
-                if(!setKey)
-                {
-                    obj->Add(std::pair<uint32_t, JVal*>(GetStrHash(str, keyStart, keyEnd), ParseJArray(obj, tokens, i, str)));
-                }
-            }
-            
-        }
-        
-        index;
-        return obj;
-    }
-    
+    //********************************************* Test Funcs *******************************************
+    //*********************************************** ***** **********************************************
+    //*********************************************** JVal ***********************************************
 
     JVal::JVal(JType t)
         : type(t)
@@ -547,11 +423,14 @@ namespace Jsones
             num->str = str;
         }
     }
-
-    std::string JVal::ToString()
+    std::string valueStr{"!value!"};
+    std::string& JVal::ToString()
     {
-        return "VAL";
+        return valueStr;
     }
+    //*********************************************** JVal ***********************************************
+    //*********************************************** ***** **********************************************
+    //*********************************************** JNull **********************************************
 
     JNull::JNull()
         :JVal(JType::NUL)
@@ -562,14 +441,39 @@ namespace Jsones
     {
     }
 
-    std::string JNull::ToString()
+    
+    std::string nullStr{"null"};
+    std::string& JNull::ToString()
     {
-        return "null";
+        return nullStr;
+    }
+    
+    //*********************************************** JNull **********************************************
+    //*********************************************** ***** **********************************************
+    //*********************************************** JStr ***********************************************
+
+
+    JStr::JStr(const char* s, size_t b, size_t e) noexcept
+        :JVal(JType::STR)
+    {
+        str = "";
+        str.append(&s[b], e-b);
     }
 
+    JStr::JStr(const std::string& str) noexcept
+        :JVal(JType::STR)
+    {
+        this->str = str;
+    }
 
-    JStr::JStr(const char* s, size_t b, size_t e)
-        :JVal(JType::STR), str(s), begin(b), end(e)
+    JStr::JStr(const std::string&& s) noexcept
+        :JVal(JType::STR), str(std::move(s))
+    {
+        
+    }
+
+    JStr::JStr(const char* ch) noexcept
+    :JVal(JType::STR), str(ch)
     {
     }
 
@@ -577,30 +481,36 @@ namespace Jsones
     {
     }
 
-    std::string JStr::ToString()
+    
+    std::string& JStr::ToString()
     {
-       return "\"" + GetStr(str, begin, end) + "\"";
+       return str;
     }
+    //*********************************************** JStr **********************************************
+    //********************************************** ***** **********************************************
+    //********************************************* JNumber *********************************************
 
     JNumber::JNumber(const char* s, size_t b, size_t e)
-        :JVal(JType::NUM), str(s), begin(b), end(e)
+        :JVal(JType::NUM)
     {
+        str = "";
+        str.append(&s[b], e-b);
     }
 
-    // JNumber::JNumber(int v)
-    //     : JVal(JType::NUM), str(std::to_string(v))
-    // {
-    // }
-    //
-    // JNumber::JNumber(float v)
-    //     : JVal(JType::NUM), str(std::to_string(v))
-    // {
-    // }
-    //
-    // JNumber::JNumber(double d)
-    //     : JVal(JType::NUM), str(std::to_string(d))
-    // {
-    // }
+     JNumber::JNumber(int v)
+         : JVal(JType::NUM), str(std::to_string(v))
+     {
+     }
+    
+    JNumber::JNumber(float v)
+    : JVal(JType::NUM), str(std::to_string(v))
+    {
+    }
+    
+    JNumber::JNumber(double d)
+    : JVal(JType::NUM), str(std::to_string(d))
+    {
+    }
 
     JNumber::~JNumber()
     {
@@ -608,7 +518,8 @@ namespace Jsones
 
     bool JNumber::IsInteger()
     {
-        for (int i = begin; i < end; i++)
+        size_t len = str.length();
+        for (int i = 0; i < len; i++)
         {
             if (str[i] == '.')
             {
@@ -634,10 +545,14 @@ namespace Jsones
         return std::stod(str);
     }
 
-    std::string JNumber::ToString()
+    std::string& JNumber::ToString()
     {
-        return GetStr(str, begin, end);
+        return str;
     }
+
+    //********************************************* JNumber *********************************************
+    //********************************************** ***** **********************************************
+    //********************************************** JBool **********************************************
 
     JBool::JBool(bool b)
         : JVal(JType::BOOL), val(b)
@@ -648,13 +563,19 @@ namespace Jsones
     {
     }
 
-    std::string JBool::ToString()
+    std::string trueStr{"true"};
+    std::string falseStr{"false"};
+    std::string& JBool::ToString()
     {
-        return (val ? "true" : "false");
+        return (val ? trueStr : falseStr);
     }
 
-    JObj::JObj(JVal* parent)
-        : JVal(JType::OBJ), parentObj(parent)
+    //*********************************************** JBool **********************************************
+    //*********************************************** ***** **********************************************
+    //*********************************************** JObj ***********************************************
+
+    JObj::JObj()
+        : JVal(JType::OBJ)
     {
     }
 
@@ -668,15 +589,20 @@ namespace Jsones
     }
 
     JObj::JObj(JObj&& objR) noexcept
-        : JVal(JType::OBJ), parentObj((objR.parentObj)), objects(std::move(objR.objects))
+        : JVal(JType::OBJ), objects(std::move(objR.objects))
     {
-        objR.parentObj = nullptr;
         objR.objects.clear();
+    }
+
+    JObj::JObj(const JObj& o) noexcept
+    :JVal(JType::OBJ), objects(o.objects)
+    {
+        
     }
 
 
     JObj::JObj(std::initializer_list<std::pair<uint32_t, JVal*>> list)
-        : JVal(JType::OBJ), parentObj(nullptr)
+        : JVal(JType::OBJ)
     {
         auto it = list.begin();
         while (it != list.end())
@@ -694,13 +620,11 @@ namespace Jsones
     void JObj::Add(std::pair<uint32_t, JArr*> add)
     {
         objects.insert(add);
-        add.second->parentObj = this;
     }
 
     void JObj::Add(std::pair<uint32_t, JObj*> add)
     {
         objects.insert(add);
-        add.second->parentObj = this;
     }
 
     JVal* JObj::Get(uint32_t hash)
@@ -741,6 +665,10 @@ namespace Jsones
         return *val;
     }
 
+    //*********************************************** JObj ***********************************************
+    //*********************************************** ***** **********************************************
+    //*********************************************** JArr ***********************************************
+
 
     void JArr::PushBack(JVal* val)
     {
@@ -752,9 +680,8 @@ namespace Jsones
         arr.push_back(new JStr(str, b, e));
     }
 
-
-    JArr::JArr(JVal* parent)
-        : JVal(JType::ARR), parentObj(nullptr)
+    JArr::JArr()
+        : JVal(JType::ARR)
     {
     }
 
@@ -768,11 +695,31 @@ namespace Jsones
         }
     }
 
-    JArr::JArr(JArr&& ar) noexcept
-        : JVal(JType::ARR), parentObj(ar.parentObj), arr(std::move(ar.arr))
+    JArr::JArr(JArr&& ar): JVal(JType::ARR),  arr(std::move(ar.arr)) 
     {
-        ar.parentObj = nullptr;
-        ar.arr.clear();
+        std::cout<<"MoveCtor"<<std::endl;
+    }
+
+
+    JArr::JArr(const JArr& ar)
+        :JVal(JType::ARR), arr(ar.arr)
+    {
+        std::cout<<"CopyCtor"<<std::endl;
+    }
+
+
+    JArr& JArr::Add(const JObj& o)
+    {
+        JObj* obj = new JObj(o);
+        arr.push_back(obj);
+        return *this;
+    }
+
+    JArr& JArr::Add(JObj&& o)
+    {
+        JObj* obj = new JObj(std::move(o));
+        arr.push_back(obj);
+        return *this;
     }
 
     void JArr::Add(JObj* obj)
@@ -780,20 +727,20 @@ namespace Jsones
         arr.push_back(obj);
     }
 
-    // void JArr::Add(double value)
-    // {
-    //     arr.push_back(new JNumber(value));
-    // }
-    //
-    // void JArr::Add(int value)
-    // {
-    //     arr.push_back(new JNumber(value));
-    // }
-    //
-    // void JArr::Add(float value)
-    // {
-    //     arr.push_back(new JNumber(value));
-    // }
+    void JArr::Add(double value)
+    {
+        arr.push_back(new JNumber(value));
+    }
+
+    void JArr::Add(int value)
+    {
+        arr.push_back(new JNumber(value));
+    }
+    
+    void JArr::Add(float value)
+    {
+        arr.push_back(new JNumber(value));
+    }
 
     void JArr::Add(const char* str, int b, int e)
     {
@@ -805,25 +752,144 @@ namespace Jsones
         arr.push_back(new JBool(value));
     }
 
+    void JArr::Add(const char* str)
+    {
+        
+        arr.push_back(new JStr(std::move(str)));
+    }
+
+    void JArr::Add(const std::string& str)
+    {
+        arr.push_back(new JStr(str));
+    }
+
+    void JArr::Add(const std::string&& str)
+    {
+        arr.push_back(new JStr(str));
+    }
+
     JVal& JArr::operator[](int index)
     {
         jassert(index < arr.size(), "JArr index exceeds vector size!");
         return *arr[index];
     }
 
-    std::string Token::ToString() const
+    //*********************************************** JArr ***********************************************
+    //*********************************************** ***** **********************************************
+    //********************************************** Parsing *********************************************
+
+    JObj* ParseJObj(std::vector<Token*>& tokens, int& index, const char* str);
+    
+    JArr* ParseJArray(std::vector<Token*>& tokens, int& index, const char* str)
     {
-        switch (type)
+        JArr* array = new JArr();
+        bool valueSetted = false;
+
+        size_t valueBeg = 0;
+        size_t valueEnd = 0;
+        for(int i = index; i < tokens.size(); i++)
         {
-        case TokenType::CURLY_BRACKET_OPEN: return std::string("CURLY_BRACKET_OPEN");
-        case TokenType::CURLY_BRACKET_CLOSE: return std::string("CURLY_BRACKET_CLOSE");
-        case TokenType::ANGLE_BRACKET_OPEN: return std::string("ANGLE_BRACKET_OPEN");
-        case TokenType::ANGLE_BRACKET_CLOSE: return std::string("ANGLE_BRACKET_CLOSE");
-        case TokenType::COLON: return std::string("COLON");
-        case TokenType::COMMA: return std::string("COMMA");
-        case TokenType::KEY: return std::string("KEY");
-        default: return std::string("NONE");
+            if(tokens[i]->type == TokenType::ANGLE_BRACKET_CLOSE)
+            {
+                if(valueSetted)
+                {
+                    array->PushBack(GetValueTypeBySubCStr(str, valueBeg, valueEnd));
+                    valueSetted = false;
+                }
+                index = i;
+                return array;
+            }
+
+            if(tokens[i]->type == TokenType::CURLY_BRACKET_OPEN)
+            {
+                array->PushBack(ParseJObj(tokens, i, str));
+            }
+            else if(tokens[i]->type == TokenType::COMMA)
+            {
+                 if(valueSetted)
+                 {
+                    array->PushBack(GetValueTypeBySubCStr(str, valueBeg, valueEnd));
+                    valueSetted = false;
+                 }
+            }
+            else if(tokens[i]->type == TokenType::KEY)
+            {
+                StrToken* tkn = static_cast<StrToken*>(tokens[i]);
+                valueBeg = tkn->beginIndex;
+                valueEnd = tkn->endIndex;
+                valueSetted = true;
+            }
         }
+        
+        index;
+        return array;
+    }
+
+   
+    JObj* ParseJObj(std::vector<Token*>& tokens, int& index, const char* str)
+    {
+        JObj* obj = new JObj();
+
+
+        size_t keyStart = 0;
+        size_t keyEnd = 0;
+        size_t valueStart = 0;
+        size_t valueEnd = 0;
+        bool setKey = true;
+        
+        for(int i = index; i < tokens.size(); i++)
+        {
+            if(tokens[i]->type == TokenType::KEY)
+            {
+                StrToken* tkn = static_cast<StrToken*>(tokens[i]);
+                if(setKey)
+                {
+                    keyStart = tkn->beginIndex;
+                    keyEnd = tkn->endIndex;
+                }
+                else
+                {
+                    valueStart = tkn->beginIndex;
+                    valueEnd = tkn->endIndex;
+                }
+            }
+            else if(tokens[i]->type == TokenType::COLON)
+            {
+                setKey = !setKey;
+            }
+            else if(tokens[i]->type == TokenType::COMMA)
+            {
+                obj->Add(std::pair<uint32_t, JVal*>(GetKeyHash(str, keyStart, keyEnd), GetValueTypeBySubCStr(str, valueStart, valueEnd)));
+                setKey = true;
+            }
+            else if(tokens[i]->type == TokenType::CURLY_BRACKET_OPEN)
+            {
+                if(!setKey)
+                {
+                    obj->Add(std::pair<uint32_t, JVal*>(GetKeyHash(str, keyStart, keyEnd), ParseJObj(tokens, i, str)));
+                }
+            }
+            else if(tokens[i]->type == TokenType::CURLY_BRACKET_CLOSE)
+            {
+                if(!setKey)
+                {
+                    obj->Add(std::pair<uint32_t, JVal*>(GetKeyHash(str, keyStart, keyEnd), GetValueTypeBySubCStr(str, valueStart, valueEnd)));
+                }
+                index = i;
+                return obj;
+            }
+            else if(tokens[i]->type == TokenType::ANGLE_BRACKET_OPEN)
+            {
+                if(!setKey)
+                {
+                    obj->Add(std::pair<uint32_t, JVal*>(GetKeyHash(str, keyStart, keyEnd), ParseJArray(tokens, i, str)));
+                }
+            }
+            
+        }
+        
+        index;
+        return obj;
     }
 
     JObj* JParse(const char* str)
@@ -832,7 +898,7 @@ namespace Jsones
         vector<Token*> tokens;
         Tokenize(str, tokens);
         int index = 0;
-        JArr* arr = ParseJArray(nullptr, tokens, index, str);
+        JArr* arr = ParseJArray(tokens, index, str);
         //PrintArray(arr, 0);
 
         for (auto token : tokens)
@@ -852,6 +918,10 @@ namespace Jsones
         }
         return nullptr;
     }
+    
+    //********************************************** Parsing *********************************************
+    //*********************************************** ***** **********************************************
+    //********************************************** Writing *********************************************
 
     std::string beautifiedTab("    ");
     std::string beautifiedNewLine("\n");
@@ -924,7 +994,14 @@ namespace Jsones
             }
             else
             {
-                ss<<it->ToString();
+                if(it->type == JType::STR)
+                {
+                    ss<<"\""<<it->ToString()<<"\"";
+                }
+                else
+                {
+                    ss<<it->ToString();
+                }
             }
                       
         }
@@ -948,7 +1025,7 @@ namespace Jsones
             ss<<Tab(beautify, tab+1);
 
             subFirst = false;
-            ss<<"\""<< PrintKey(it.first) <<"\"" << Space(beautify) << ":" << Space(beautify);
+            ss<<"\""<< GetHashedString(it.first) <<"\"" << Space(beautify) << ":" << Space(beautify);
 
             if (it.second->type == JType::OBJ)
             {
@@ -960,7 +1037,14 @@ namespace Jsones
             }
             else
             {
-                ss<<it.second->ToString();
+                if(it.second->type == JType::STR)
+                {
+                    ss<<"\""<<it.second->ToString()<<"\"";
+                }
+                else
+                {
+                    ss<<it.second->ToString();
+                }
             }
                       
         }
@@ -968,4 +1052,6 @@ namespace Jsones
         return ss;
     }
     
+    //********************************************** Writing *********************************************
+    //*********************************************** ***** **********************************************
 }

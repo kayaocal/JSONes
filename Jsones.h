@@ -29,9 +29,9 @@
 #include <map>
 #include <vector>
 #include <sstream>
-
 // Use (void) to silent unused warnings.
 #define jassert(exp, msg) assert(((void)msg, exp))
+
 
 namespace Jsones
 {
@@ -67,7 +67,7 @@ namespace Jsones
         void operator =(const std::string& str);
         void operator =(const char* str);
 
-        virtual std::string ToString();
+        virtual std::string& ToString();
     };
     
     struct JSONES_API JNull : public JVal
@@ -76,37 +76,36 @@ namespace Jsones
 
         ~JNull() override;
 
-        virtual std::string ToString() override;
+        virtual std::string& ToString() override;
     };
     
     struct JSONES_API JStr : public JVal
     {
-        const char* str;
-        size_t begin;
-        size_t end;
-        JStr(const char* str, size_t beg, size_t end);
+        std::string str;
+        JStr(const char* str, size_t beg, size_t end) noexcept;
+        JStr(const std::string& str) noexcept;
+        JStr(const std::string&& str) noexcept;
+        JStr(const char* ch) noexcept;
 
         ~JStr() override;
 
-        virtual std::string ToString() override;
+        virtual std::string& ToString() override;
     };
 
     struct JSONES_API JNumber : public JVal
     {
-        const char * str;
-        size_t begin;
-        size_t end;
+        std::string str;
         JNumber(const char* s, size_t b, size_t e);
-        // explicit JNumber(int s);
-        // explicit JNumber(float s);
-        // explicit JNumber(double s);
+        explicit JNumber(int s);
+        explicit JNumber(float s);
+        explicit JNumber(double s);
         ~JNumber() override;
         bool IsInteger();
         int AsInt() const;
         float AsFloat() const;
         double AsDouble() const;
 
-        virtual std::string ToString() override;
+        virtual std::string& ToString() override;
 
     };
 
@@ -116,7 +115,7 @@ namespace Jsones
         JBool(bool b);
         ~JBool() override;
 
-        virtual std::string ToString() override;
+        virtual std::string& ToString() override;
     };
 
     struct JArr;
@@ -125,16 +124,14 @@ namespace Jsones
     struct JSONES_API JObj : public JVal
     {
         std::map<uint32_t, JVal*> objects;
-        JVal* parentObj;
 
         /// @brief Constructor
-        /// @param parent just keep it null. parentObj is only needed while parsing.
-        explicit JObj(JVal* parent = nullptr);
+        explicit JObj();
         ~JObj() override;
 
         JObj(JObj&& objR) noexcept;
         //JObj(std::initializer_list<std::pair<uint32_t, JVal*>> list);
-        JObj(const JObj&) = delete;
+        JObj(const JObj&) noexcept;
 
         JObj(std::initializer_list<std::pair<uint32_t, JVal*>>);
 
@@ -160,21 +157,21 @@ namespace Jsones
         JVal& operator[](const std::string&);
     };
 
-    /// @brief It's derrived from JObj because it's the easiest way to parse json. You may see it on JParse function.
     struct JSONES_API JArr : public JVal
     {
         std::vector<JVal*> arr;
-        JVal* parentObj;
+        
         /// @brief Constructor
-        /// @param parent just keep it null. parentObj is only needed while parsing.
-        JArr(JVal* parent);
+        JArr();
         ~JArr() override;
-        JArr(JArr&& ar) noexcept;
+        JArr(JArr&& ar);
+        JArr(const JArr& ar);
 
         template <typename T>
         JArr(std::initializer_list<T> list)
             : JVal(JType::ARR)
         {
+            std::cout<<"Jarr initializer list"<<std::endl;
             auto it = list.begin();
             while (it != list.end())
             {
@@ -183,12 +180,17 @@ namespace Jsones
             }
         }
 
+        JArr& Add(const JObj& obj);
+        JArr& Add(JObj&& obj);
         void Add(JObj* obj);
         void Add(double value);
         void Add(int value);
         void Add(float value);
         void Add(const char* str, int b, int e);
         void Add(bool value);
+        void Add(const char* str);
+        void Add(const std::string& str);
+        void Add(const std::string&& str);
 
         JVal& operator[](int index);
 
@@ -196,53 +198,88 @@ namespace Jsones
         void PushBack(const char* str, int b, int e);
     };
 
+
+    uint32_t GetHash(const char* str);
+    uint32_t GetHash(const std::string& str);
+    uint32_t GetKeyHash(const std::string str);
+    uint32_t GetKeyHash(const char* str, size_t b, size_t e);
+
     //********************************************** ***** **********************************************
     //********************************************** JPair **********************************************
-    //
-    // /// @brief Quick way to create json object pair.
-    // JSONES_API std::pair<std::string, JVal*> JPair(const std::string& key, const std::string& val);
-    //
-    // /// @brief Quick way to create json object pair.
-    // JSONES_API std::pair<std::string, JVal*> JPair(const std::string& key, const char* val);
-    //
-    // /// @brief Quick way to create json object pair.
-    // JSONES_API std::pair<std::string, JVal*> JPair(const std::string& key, double val);
-    //
-    // /// @brief Quick way to create json object pair.
-    // JSONES_API std::pair<std::string, JVal*> JPair(const std::string& key, float val);
-    //
-    // /// @brief Quick way to create json object pair.
-    // JSONES_API std::pair<std::string, JVal*> JPair(const std::string& key, bool val);
-    //
-    // /// @brief Quick way to create json object pair.
-    // JSONES_API std::pair<std::string, JVal*> JPair(const std::string& key, int val);
-    //
-    // /// @brief Quick way to create json object pair.
-    // JSONES_API std::pair<std::string, JVal*> JPair(const std::string& key, JObj* val);
-    //
-    // /// @brief Quick way to create json object pair.
-    // JSONES_API std::pair<std::string, JVal*> JPair(const std::string& key, JObj&& val);
-    //
-    // /// @brief Quick way to create json object pair.
-    // JSONES_API std::pair<std::string, JVal*> JPair(const std::string& key, JArr* arr);
-    //
-    // JSONES_API std::pair<std::string, JVal*> JPair(const std::string& key, JArr&& arr);
-    //
-    //
-    // /// @brief Quick way to create json object pair.
-    // JSONES_API std::pair<std::string, JVal*> JPair(const std::string& key, JArr& arr);
-    //
-    // /// @brief Quick way to create json object pair.
-    // JSONES_API std::pair<std::string, JVal*> JPair(const std::string& key, JVal* jVal);
+    
+    JSONES_API __forceinline std::pair<uint32_t, JVal*> JPair(const std::string& key, const std::string&& val)
+    {
+        return std::pair<uint32_t, JVal*>(GetKeyHash(key), new JStr(val));
+    }
+
+    JSONES_API __forceinline std::pair<uint32_t, JVal*> JPair(const std::string& key, int val)
+    {
+        return std::pair<uint32_t, JVal*>(GetKeyHash(key), new JNumber(val));
+    }
+    
+    JSONES_API __forceinline std::pair<uint32_t, JVal*> JPair(const std::string& key, double val)
+    {
+        return std::pair<uint32_t, JVal*>(GetKeyHash(key), new JNumber(val));
+    }
+
+    JSONES_API __forceinline std::pair<uint32_t, JVal*> JPair(const std::string& key, float val)
+    {
+        return std::pair<uint32_t, JVal*>(GetKeyHash(key), new JNumber(val));
+    }
+
+    JSONES_API __forceinline std::pair<uint32_t, JVal*> JPair(const std::string& key, bool val)
+    {
+        return std::pair<uint32_t, JVal*>(GetKeyHash(key), new JBool(val));
+    }
+
+    JSONES_API __forceinline std::pair<uint32_t, JVal*> JPair(const std::string& key, const char* str)
+    {
+        return std::pair<uint32_t, JVal*>(GetKeyHash(key), new JStr(str));
+    }
+
+    JSONES_API __forceinline std::pair<uint32_t, JVal*> JPair(const std::string& key, std::string&& rStr)
+    {
+        return std::pair<uint32_t, JVal*>(GetKeyHash(key), new JStr(rStr));
+    }
+
+    JSONES_API __forceinline std::pair<uint32_t, JVal*> JPair(const std::string& key, JObj* obj)
+    {
+        return std::pair<uint32_t, JVal*>(GetKeyHash(key), static_cast<JVal*>(obj));
+    }
+
+    JSONES_API __forceinline std::pair<uint32_t, JVal*> JPair(const std::string& key, const JObj& obj)
+    {
+        return std::pair<uint32_t, JVal*>(GetKeyHash(key), static_cast<JVal*>(new JObj(obj)));
+    }
+
+    JSONES_API __forceinline std::pair<uint32_t, JVal*> JPair(const std::string& key, JObj&& obj)
+    {
+        return std::pair<uint32_t, JVal*>(GetKeyHash(key), static_cast<JVal*>(new JObj(std::move(obj))));
+    }
+
+    JSONES_API __forceinline std::pair<uint32_t, JVal*> JPair(const std::string& key, JArr* arr)
+    {
+        return std::pair<uint32_t, JVal*>(GetKeyHash(key), static_cast<JVal*>(arr));
+    }
+    
+    JSONES_API __forceinline std::pair<uint32_t, JVal*> JPair(const std::string& key, const JArr& arr)
+    {
+        return std::pair<uint32_t, JVal*>(GetKeyHash(key), static_cast<JVal*>(new JArr(arr)));
+    }
+
+    JSONES_API __forceinline std::pair<uint32_t, JVal*> JPair(const std::string& key, JArr&& arr)
+    {
+        JArr* jarr = new JArr(std::move(arr));
+        return std::pair<uint32_t, JVal*>(GetKeyHash(key), static_cast<JVal*>(jarr));
+    }
+   
 
     //********************************************** ***** **********************************************
 
 
-    /// @brief cout json's structure and it's members types.
-    /// @param root 
-    /// @param tab 
-    JSONES_API void PrintJson(JObj* root, int tab = 0);
-
+    void PrintArray(JArr* arr, int tab);
+    void PrintObj(JObj* obj, int tab);
+    
     /// @brief Parses json
     /// @return JObj
     JSONES_API JObj* JParse(const char*);

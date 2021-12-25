@@ -49,9 +49,11 @@ void CreateJsonTest()
 #include <fstream>
 void ReadArsenal()
 {
+
+    
     using namespace Jsones;
     std::basic_ifstream<char> stream;
-    stream.open("C:\\Development\\Jsones\\sil_carddata_file0.json", std::ifstream::in | std::ifstream::binary);
+    stream.open("C:\\Development\\Jsones\\arsenal.json", std::ifstream::in | std::ifstream::binary);
     if(stream.is_open())
 	{
         std::string text, line;
@@ -63,7 +65,6 @@ void ReadArsenal()
         
 		JParse(data);
         std::cout<<"Bitti";
-      //  PrintJson(parsedObj);
 	}
 }
 
@@ -71,9 +72,23 @@ void ReadArsenal()
 int main()
 {
     std::cout<<"Basladik"<<std::endl;
-    ReadArsenal();
-   // Jsones::JParse("{\"str\" : \" HELLO WORLD\", \"int\" : 223, \"nullTest\": null\", \"arr\" : [1,2,3,4,5,6,7,8,9], \"booltest\": false}");
-    //Jsones::JParse("[{\"str\" : \" HELLO WORLD\", \"int\" : 223, \"nullTest\": null\", \"arr\" : [1,2,3,4,5,6,7,8,9], \"booltest\": false},{\"name\" : \" HELLO WORLD 2\", \"int2\" : 8411414.5, \"nullTest\": null\", \"arr\" : [true, false, null, false], \"booltdest\": true}]");
+    using namespace Jsones;
+
+    JObj obj{
+        JPair("Hello", "world"),
+        JPair("fucking", "fuck"),
+        JPair("intArr12", JArr{true,false}),
+        JPair("SubObject", JObj{JPair("subObjName", "subObject"), JPair("subObjInt", 112)})
+    };
+
+    JArr arr = JArr();
+    
+    arr.Add(obj)
+    .Add(obj)
+    .Add(JObj{JPair("test", "testStr")});
+
+    PrintArray(&arr, 0);
+
     
     return 0;
 }
