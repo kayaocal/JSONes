@@ -2,7 +2,6 @@
 
 * Just another small json parser and writer. It has no reflection or fancy specs.
 * It is tested with examples at json.org
-* **This library does not validate json yet!**
 * Only standart library. No any other 3rd party library required.
 * Written in cpp 11.
 

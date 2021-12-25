@@ -29,8 +29,13 @@
 #include <map>
 #include <vector>
 #include <sstream>
+
 // Use (void) to silent unused warnings.
 #define jassert(exp, msg) assert(((void)msg, exp))
+
+#define jassert_m(cond, msg) do \
+{ if (!(cond)) { std::ostringstream str; str << msg; std::cerr << str.str(); std::abort(); } \
+} while(0)
 
 
 namespace Jsones

@@ -68,19 +68,36 @@ namespace Jsones
     Token* TokenPtrAngleBracketOpenToken = new Token(TokenType::ANGLE_BRACKET_OPEN);
     Token* TokenPtrAngleBracketClose = new Token(TokenType::ANGLE_BRACKET_CLOSE);
 
-    void Tokenize(const char* js, std::vector<Token*>& tokens)
+    int line = 0;
+    int lineIndex = 0;
+
+    std::string GetTokenizeError()
+    {
+        return std::string("Json Parse Error at line ") + std::to_string(line) + " and line index : " + std::to_string(lineIndex);
+    }
+    bool Tokenize(const char* js, std::vector<Token*>& tokens)
     {
         bool keyStarted = false;
         size_t len = strlen(js);
         bool dittoMarked = false;
         int indexS;
+        Token* prevToken = nullptr;
+        line = 1;
+        lineIndex = 0;
         for (int i = 0; i < len; i++)
         {
+            lineIndex++;
             if (keyStarted)
             {
                 if (js[i] == '\"' || (js[i] == '\n' && js[i-1] != '\\') || (js[i] == '\t' && js[i-1] != '\\') || js[i] == '\r')
                 {
-                    tokens.push_back(new StrToken(TokenType::KEY, indexS, i));
+                    if(js[i] == '\n')
+                    {
+                        line++;
+                        lineIndex = 0;
+                    }
+                    prevToken = new StrToken(TokenType::KEY, indexS, i);
+                    tokens.push_back(prevToken);
                     keyStarted = false;
                     dittoMarked = false;
                 }
@@ -89,19 +106,27 @@ namespace Jsones
                     keyStarted = false;
                     tokens.push_back(new StrToken(TokenType::KEY, indexS, i));
                     tokens.push_back(TokenPtrComma);
+                    prevToken = TokenPtrComma;
                 }
                 else if (js[i] == '}' && !dittoMarked)
                 {
                     keyStarted = false;
                     tokens.push_back(new StrToken(TokenType::KEY, indexS, i));
                     tokens.push_back(TokenPtrCurlyBracketClose);
+                    prevToken = TokenPtrCurlyBracketClose;
                 }
                 else if (js[i] == ']' && !dittoMarked)
                 {
                     keyStarted = false;
                     tokens.push_back(new StrToken(TokenType::KEY, indexS, i));
                     tokens.push_back(TokenPtrAngleBracketClose);
+                    prevToken = TokenPtrAngleBracketClose;
                 }
+                else if(!dittoMarked && ((js[i] < '0' || js[i] > '9') && js[i] != '.' && js[i] != ','))
+                {
+                    return false;
+                }
+                
              
                 continue;
             }
@@ -112,45 +137,86 @@ namespace Jsones
             }
             if (js[i] == '\n' || js[i] == '\t' || js[i] == '\r')
             {
+                if(prevToken == TokenPtrColon)
+                {
+                    return false;
+                }
+                if(js[i] == '\n')
+                {
+                    line++;
+                    lineIndex = 0;
+                }
                 continue;
             }
 
             else if (js[i] == '{')
             {
+                if(prevToken == TokenPtrCurlyBracketOpen || (prevToken != nullptr && prevToken != TokenPtrComma && prevToken != TokenPtrColon && prevToken != TokenPtrAngleBracketOpenToken))
+                {
+                    return false;
+                }
                 tokens.push_back(TokenPtrCurlyBracketOpen);
+                prevToken = TokenPtrCurlyBracketOpen;
             }
             else if (js[i] == '}')
             {
                 tokens.push_back(TokenPtrCurlyBracketClose);
+                prevToken = TokenPtrCurlyBracketClose;
             }
             else if (js[i] == '[')
             {
                 tokens.push_back(TokenPtrAngleBracketOpenToken);
+                prevToken = TokenPtrAngleBracketOpenToken;
             }
             else if (js[i] == ']')
             {
+                if(prevToken == TokenPtrCurlyBracketOpen)
+                {
+                    return false;
+                }
                 tokens.push_back(TokenPtrAngleBracketClose);
+                prevToken = TokenPtrAngleBracketClose;
             }
             else if (js[i] == ',')
             {
+                if(prevToken == TokenPtrComma || prevToken == TokenPtrAngleBracketOpenToken)
+                {
+                    return false;
+                }
                 tokens.push_back(TokenPtrComma);
+                prevToken = TokenPtrComma;
             }
             else if (js[i] == ':')
             {
+                if(prevToken == TokenPtrColon)
+                {
+                    return false;
+                }
                 tokens.push_back(TokenPtrColon);
+                prevToken = TokenPtrColon;
             }
             else if (js[i] == '\"')
             {
+                if(prevToken != TokenPtrColon && prevToken != TokenPtrComma && prevToken != TokenPtrCurlyBracketOpen)
+                {
+                    return false;
+                }
                 dittoMarked = true;
                 keyStarted = true;
                 indexS = i+1;
             }
             else
             {
+                if(prevToken != TokenPtrColon)
+                {
+                    return false;
+                }
                 keyStarted = true;
                 indexS = i;
             }
         }
+
+        return true;
     }
 
     JArr* ParseJArray(JArr* arr, std::vector<Token*>& tokens, int& index, const char* str);
@@ -676,7 +742,9 @@ namespace Jsones
         :JVal(JType::OBJ)
     {
         std::vector<Token*> tokens;
-        Tokenize(str, tokens);
+        bool tokenize = Tokenize(str, tokens);
+
+        jassert_m(tokenize, GetTokenizeError());
         int index = 0;
         ParseJObj(this, tokens, index, str);
 
@@ -903,11 +971,14 @@ namespace Jsones
         }
     }
 
+
     JArr::JArr(const char* str)
         :JVal(JType::ARR)
     {
         std::vector<Token*> tokens;
-        Tokenize(str, tokens);
+        bool tokenize = Tokenize(str, tokens);
+        jassert_m(tokenize, GetTokenizeError());
+        
         int index = 0;
         ParseJArray(this, tokens, index, str);
         //PrintArray(arr, 0);
