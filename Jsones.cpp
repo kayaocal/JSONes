@@ -500,7 +500,7 @@ namespace Jsones
         *obj = o;
     }
 
-    void JVal::operator=(JObj&& o)
+    void JVal::operator=(JObj&& o) noexcept
     {
         jassert(type == JType::OBJ, "const char* type can only be assigned to JObj types");
         JObj* obj = dynamic_cast<JObj*>(this);
@@ -549,7 +549,7 @@ namespace Jsones
         this->str = str;
     }
 
-    JStr::JStr(const std::string&& s) noexcept
+    JStr::JStr(std::string&& s) noexcept
         :JVal(JType::STR), str(std::move(s))
     {
         
@@ -800,8 +800,8 @@ namespace Jsones
     JObj* JObj::GetObj(const std::string& key)
     {
         JVal* val = Get(Oyun::hashlittle(key.c_str(), key.length(), 0));
-        assert(val != nullptr, "Given key is exist");
-        assert(val->type == JType::OBJ, "Given key is not an JObj*");
+        jassert(val != nullptr, "Given key is exist");
+        jassert(val->type == JType::OBJ, "Given key is not an JObj*");
 
         return dynamic_cast<JObj*>(val);
     }
@@ -809,8 +809,8 @@ namespace Jsones
     JArr* JObj::GetArr(const std::string& key)
     {
         JVal* val = Get(Oyun::hashlittle(key.c_str(), key.length(), 0));
-        assert(val != nullptr, "Given key is exist");
-        assert(val->type == JType::ARR, "Given key is not an JArr*");
+        jassert(val != nullptr, "Given key is exist");
+        jassert(val->type == JType::ARR, "Given key is not an JArr*");
 
         return dynamic_cast<JArr*>(val);
     }
@@ -883,7 +883,7 @@ namespace Jsones
         }
     }
 
-    void JObj::operator=(JObj&& o)
+    void JObj::operator=(JObj&& o) noexcept
     {
         for(auto it : objects)
         {
@@ -922,7 +922,7 @@ namespace Jsones
         }
     }
 
-    JArr::JArr(JArr&& ar): JVal(JType::ARR),  array(std::move(ar.array)) 
+    JArr::JArr(JArr&& ar) noexcept : JVal(JType::ARR),  array(std::move(ar.array))
     {
     }
 
@@ -1120,7 +1120,7 @@ namespace Jsones
         }
     }
 
-    void JArr::operator=(JArr&& ar)
+    void JArr::operator=(JArr&& ar) noexcept
     {
         for(auto it : array)
         {

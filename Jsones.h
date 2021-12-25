@@ -75,7 +75,7 @@ namespace Jsones
         void operator =(const char* str);
         void operator =(JObj* o);
         void operator =(const JObj& o);
-        void operator =(JObj&& o);
+        void operator =(JObj&& o) noexcept;
 
         virtual std::string& ToString();
     };
@@ -94,7 +94,7 @@ namespace Jsones
         std::string str;
         JStr(const char* str, size_t beg, size_t end) noexcept;
         JStr(const std::string& str) noexcept;
-        JStr(const std::string&& str) noexcept;
+        JStr(std::string&& str) noexcept;
         JStr(const char* ch) noexcept;
         JStr(const JStr& s) noexcept;
 
@@ -172,7 +172,7 @@ namespace Jsones
         JVal& operator[](const std::string&);
 
         void operator =(const JObj& o);
-        void operator =(JObj&& o);
+        void operator =(JObj&& o) noexcept;
     };
 
     struct JSONES_API JArr : public JVal
@@ -182,7 +182,7 @@ namespace Jsones
         /// @brief Constructor
         JArr();
         ~JArr() override;
-        JArr(JArr&& ar);
+        JArr(JArr&& ar) noexcept;
         JArr(const JArr& ar);
         JArr(const char* str);
 
@@ -215,7 +215,7 @@ namespace Jsones
         JVal& operator[](int index);
 
         void operator =(const JArr& o);
-        void operator =(JArr&& o);
+        void operator =(JArr&& o) noexcept;
         
         void PushBack(JVal* val);
         void PushBack(const char* str, int b, int e);
