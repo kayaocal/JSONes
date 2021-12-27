@@ -17,7 +17,11 @@
 //
 // You may need JSONES_API for importing or exporting in your library
 #ifndef JSONES_API
-#define JSONES_API
+#ifdef OyunEngine_EXPORTS
+#define JSONES_API __declspec(dllexport)
+#else
+#define JSONES_API __declspec(dllimport)
+#endif
 #endif
 
 
@@ -230,7 +234,7 @@ namespace Jsones
     //********************************************** ***** **********************************************
     //********************************************** JPair **********************************************
     
-    JSONES_API __forceinline std::pair<uint32_t, JVal*> JPair(const std::string& key, const std::string&& val)
+    JSONES_API __forceinline std::pair<uint32_t, JVal*> JPair(const std::string& key, const std::string& val)
     {
         return std::pair<uint32_t, JVal*>(GetKeyHash(key), new JStr(val));
     }

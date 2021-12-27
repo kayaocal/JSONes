@@ -2,8 +2,7 @@
 #include <fstream>
 #include "Jsones.h"
 
-
-#include "lookup3.h"
+#include "FileIO.h"
 
 
 
@@ -347,12 +346,12 @@ namespace Jsones
 
     uint32_t GetHash(const char* str)
     {
-        return Oyun::hashlittle(str, strlen(str), 0);
+        return Oyun::GetHash(str);
     }
 
     uint32_t GetHash(const std::string& str)
     {
-        return Oyun::hashlittle(str.c_str(), str.length(), 0);
+        return Oyun::GetHash(str);
     }
     
     //********************************************** Helpers *********************************************
@@ -386,7 +385,7 @@ namespace Jsones
 
      uint32_t GetKeyHash(const char* str, size_t b, size_t e)
     {
-        uint32_t hash =  Oyun::hashlittle(&str[b], e-b, 0);
+        uint32_t hash =  Oyun::GetHash(SubstrFromCharArray (&str[b], e-b, 0));
         auto it = KeyHashes.begin();
         auto found = KeyHashes.find(hash);
         if(found == KeyHashes.end())
@@ -836,7 +835,7 @@ namespace Jsones
 
     JObj* JObj::GetObj(const std::string& key)
     {
-        JVal* val = Get(Oyun::hashlittle(key.c_str(), key.length(), 0));
+        JVal* val = Get(GetHash(SubstrFromCharArray(key.c_str(), key.length(), 0)));
         jassert(val != nullptr, "Given key is exist");
         jassert(val->type == JType::OBJ, "Given key is not an JObj*");
 
@@ -845,7 +844,7 @@ namespace Jsones
 
     JArr* JObj::GetArr(const std::string& key)
     {
-        JVal* val = Get(Oyun::hashlittle(key.c_str(), key.length(), 0));
+        JVal* val = Get(GetHash(SubstrFromCharArray(key.c_str(), key.length(), 0)));
         jassert(val != nullptr, "Given key is exist");
         jassert(val->type == JType::ARR, "Given key is not an JArr*");
 
@@ -864,7 +863,7 @@ namespace Jsones
 
     JVal& JObj::operator[](const std::string& str)
     {
-        JVal* val = Get(Oyun::hashlittle(str.c_str(), str.length(), 0));
+        JVal* val = Get(GetHash(SubstrFromCharArray(str.c_str(), str.length(), 0)));
         jassert(val!=nullptr, "given key is not exist");
         return *val;
     }
