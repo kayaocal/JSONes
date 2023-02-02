@@ -78,7 +78,7 @@ namespace Jsones
 
     bool CStrSubCompare(const char* str, size_t beg, size_t end, const char* comp);
     bool CStrSubIsNumber(const char* str, size_t beg, size_t end);
-    bool IsKeywordValid(const char* str, int b, int e)
+    bool IsKeywordValid(const char* str, size_t b, size_t e)
     {
         if (CStrSubCompare(str, b, e, "null") ||
             CStrSubCompare(str, b, e, "true") ||
@@ -91,21 +91,53 @@ namespace Jsones
         return false;
     }
 
-    bool Tokenize(const char* js, std::vector<Token*>& tokens)
+    
+    bool TokenizeUTF8(const char* js, std::vector<Token*>& tokens, const bool utf8)
     {
         bool keyStarted = false;
-        size_t len = strlen(js);
+        const size_t len = strlen(js);
         bool dittoMarked = false;
-        int indexS;
+        int indexS = 0;
         Token* prevToken = nullptr;
         line = 1;
         lineIndex = 0;
-        for (int i = 0; i < len; i++)
+        for (size_t i = 0; i < len; i++)
         {
+            if(utf8)
+            {
+                int byteCount = 1;
+                if ((js[i] & 0x80) == 0x00)
+                {
+                    // U+0000 to U+007F 
+                    byteCount = 1;
+                }
+                else if ((js[i] & 0xE0) == 0xC0)
+                {
+                    // U+0080 to U+07FF 
+                    byteCount = 2;
+                }
+                else if ((js[i] & 0xF0) == 0xE0)
+                {
+                    // U+0800 to U+FFFF 
+                    byteCount = 3;
+                }
+                else if ((js[i] & 0xF8) == 0xF0)
+                {
+                    // U+10000 to U+10FFFF 
+                    byteCount = 4;
+                }
+                
+                if(byteCount > 1)
+                {
+                    i += (byteCount - 1);
+                    lineIndex += (byteCount - 1);
+                    continue;
+                }
+            }
             lineIndex++;
             if (keyStarted)
             {
-                if (js[i] == '\"' || (js[i] == '\n' && js[i-1] != '\\') || (js[i] == '\t' && js[i-1] != '\\') || js[i] == '\r')
+                if ((js[i] == '\"' && js[i-1] != '\\') || (js[i] == '\n' && js[i-1] != '\\') || (js[i] == '\t' && js[i-1] != '\\') || js[i] == '\r')
                 {
                     if(js[i] == '\n')
                     {
@@ -235,7 +267,7 @@ namespace Jsones
             }
             else
             {
-                if(prevToken != TokenPtrColon && (js[i] != 'n' && js[i] != 'u' && js[i] != 'l')) // object can be null. Ugly solution
+                if(prevToken != TokenPtrColon && (js[i] != 'n' && js[i] != 'u' && js[i] != 'l') && !dittoMarked) // object can be null. Ugly solution
                 {
                     return false;
                 }
@@ -246,7 +278,7 @@ namespace Jsones
 
         return true;
     }
-
+    
     JArr* ParseJArray(JArr* arr, std::vector<Token*>& tokens, int& index, const char* str);
     JObj* ParseJObj(JObj* o, std::vector<Token*>& tokens, int& index, const char* str);
     //********************************************* Tokenizing *******************************************
@@ -649,7 +681,7 @@ namespace Jsones
 
     bool JNumber::IsInteger()
     {
-        size_t len = str.length();
+        const size_t len = str.length();
         for (int i = 0; i < len; i++)
         {
             if (str[i] == '.')
@@ -743,27 +775,27 @@ namespace Jsones
             }
             else if(it.second->type == JType::OBJ)
             {
-                JObj* obj = static_cast<JObj*>(it.second);
+                JObj* obj = dynamic_cast<JObj*>(it.second);
                 ptr = new JObj(*obj);
             }
             else if(it.second->type == JType::NUM)
             {
-                JNumber* num = static_cast<JNumber*>(it.second);
+                JNumber* num = dynamic_cast<JNumber*>(it.second);
                 ptr = new JNumber(*num);
             }
             else if(it.second->type == JType::STR)
             {
-                JStr* s = static_cast<JStr*>(it.second);
+                JStr* s = dynamic_cast<JStr*>(it.second);
                 ptr = new JStr(*s);
             }
              else if(it.second->type == JType::BOOL)
             {
-                JBool* b = static_cast<JBool*>(it.second);
+                JBool* b = dynamic_cast<JBool*>(it.second);
                 ptr = new JBool(*b);
             }
              else if(it.second->type == JType::ARR)
             {
-                 JArr* a = static_cast<JArr*>(it.second);
+                 JArr* a = dynamic_cast<JArr*>(it.second);
                 ptr = new JArr(*a);
             }
             else
@@ -775,12 +807,13 @@ namespace Jsones
         }
     }
 
-    JObj::JObj(const char* str)
+    JObj::JObj(const char* str, bool UTF8)
         :JVal(JType::OBJ)
     {
         std::vector<Token*> tokens;
-        bool tokenize = Tokenize(str, tokens);
-
+        bool tokenize = false;
+        tokenize = TokenizeUTF8(str, tokens, UTF8);
+        
         jassert_m(tokenize, GetTokenizeError());
         int index = 0;
         ParseJObj(this, tokens, index, str);
@@ -793,6 +826,8 @@ namespace Jsones
             }
         }
     }
+
+  
 
 
     JObj::JObj(std::initializer_list<std::pair<uint32_t, JVal*>> list)
@@ -1009,11 +1044,11 @@ namespace Jsones
     }
 
 
-    JArr::JArr(const char* str)
+    JArr::JArr(const char* str, bool utf8)
         :JVal(JType::ARR)
     {
         std::vector<Token*> tokens;
-        bool tokenize = Tokenize(str, tokens);
+        bool tokenize = TokenizeUTF8(str, tokens, utf8);
         jassert_m(tokenize, GetTokenizeError());
         
         int index = 0;
@@ -1125,27 +1160,27 @@ namespace Jsones
             }
             else if(it->type == JType::OBJ)
             {
-                JObj* obj = static_cast<JObj*>(it);
+                JObj* obj = dynamic_cast<JObj*>(it);
                 ptr = new JObj(*obj);
             }
             else if(it->type == JType::NUM)
             {
-                JNumber* num = static_cast<JNumber*>(it);
+                JNumber* num = dynamic_cast<JNumber*>(it);
                 ptr = new JNumber(*num);
             }
             else if(it->type == JType::STR)
             {
-                JStr* s = static_cast<JStr*>(it);
+                JStr* s = dynamic_cast<JStr*>(it);
                 ptr = new JStr(*s);
             }
              else if(it->type == JType::BOOL)
             {
-                JBool* b = static_cast<JBool*>(it);
+                JBool* b = dynamic_cast<JBool*>(it);
                 ptr = new JBool(*b);
             }
              else if(it->type == JType::ARR)
             {
-                 JArr* a = static_cast<JArr*>(it);
+                 JArr* a = dynamic_cast<JArr*>(it);
                 ptr = new JArr(*a);
             }
             else
@@ -1244,7 +1279,7 @@ namespace Jsones
         {
             if(tokens[i]->type == TokenType::KEY)
             {
-                StrToken* tkn = static_cast<StrToken*>(tokens[i]);
+                const StrToken* tkn = static_cast<StrToken*>(tokens[i]);
                 if(setKey)
                 {
                     keyStart = tkn->beginIndex;
@@ -1288,10 +1323,8 @@ namespace Jsones
                     obj->Add(std::pair<uint32_t, JVal*>(GetKeyHash(str, keyStart, keyEnd), ParseJArray(nullptr, tokens, i, str)));
                 }
             }
-            
         }
         
-        index;
         return obj;
     }
 

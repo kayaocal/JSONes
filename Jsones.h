@@ -145,7 +145,7 @@ namespace Jsones
         //JObj(std::initializer_list<std::pair<uint32_t, JVal*>> list);
         JObj(const JObj&) noexcept;
 
-        JObj(const char* str);
+        JObj(const char* str, bool utf8 = false);
         JObj(std::initializer_list<std::pair<uint32_t, JVal*>>);
 
         void Add(std::pair<uint32_t, JVal*> add);
@@ -184,7 +184,7 @@ namespace Jsones
         ~JArr() override;
         JArr(JArr&& ar) noexcept;
         JArr(const JArr& ar);
-        JArr(const char* str);
+        JArr(const char* str, bool utf8 = false);
 
         template <typename T>
         JArr(std::initializer_list<T> list)
